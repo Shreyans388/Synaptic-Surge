@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import type { Response } from "express";
 import type { Types } from "mongoose";
+import crypto from "crypto";
 
 export const generateToken = (
   userId: Types.ObjectId | string,
@@ -21,3 +22,21 @@ export const generateToken = (
 
   return token;
 };
+
+
+export function encrypt(text: string) {
+  const encryptionKey = process.env.ENCRYPTION_KEY;
+
+  if (!encryptionKey) {
+    throw new Error("ENCRYPTION_KEY is not defined in environment variables");
+  }
+
+  const algorithm = "aes-256-cbc";
+  const key = Buffer.from(encryptionKey, "hex");
+
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv(algorithm, key, iv);
+
+  const encrypted = Buffer.concat([cipher.update(text), cipher.final()]);
+  return iv.toString("hex") + ":" + encrypted.toString("hex");
+}

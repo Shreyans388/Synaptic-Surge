@@ -1,6 +1,6 @@
-import  type{ Request, Response, NextFunction } from "express";
-import jwt  from "jsonwebtoken";
-import type { JwtPayload } from "jsonwebtoken"
+import type { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import type { JwtPayload } from "jsonwebtoken";
 import User from "../models/userModel.js";
 import type { IUser } from "../models/userModel.js";
 
@@ -14,7 +14,17 @@ export const protectRoute = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const token = req.cookies?.jwt as string | undefined;
+    let token: string | undefined;
+
+    // 1️⃣ Check Authorization header (Postman / API clients)
+    if (req.headers.authorization?.startsWith("Bearer ")) {
+      token = req.headers.authorization.split(" ")[1];
+    }
+
+    // 2️⃣ Fallback to cookie (Browser flow)
+    if (!token && req.cookies?.jwt) {
+      token = req.cookies.jwt;
+    }
 
     if (!token) {
       res.status(401).json({ message: "Unauthorized - No token provided" });
@@ -45,7 +55,7 @@ export const protectRoute = async (
     next();
   } catch (error) {
     console.error("Error in protectRoute middleware:", error);
-    res.status(500).json({ message: "Internal server error" });
+    res.status(401).json({ message: "Unauthorized - Invalid token" });
   }
 };
 
@@ -59,4 +69,3 @@ export const requireAdmin = (
   }
   next();
 };
-
