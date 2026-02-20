@@ -1,8 +1,8 @@
 import type { Request, Response } from "express";
 import bcrypt from "bcryptjs";
-import User from "../models/userModel.js";
+
 import { generateToken } from "../lib/utils.js";
-import type { IUser } from "../models/userModel.js";
+import { User, type IUser } from "../models/userModel.js";
 
 interface AuthRequestBody {
   fullName?: string;

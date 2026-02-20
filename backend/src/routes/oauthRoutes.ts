@@ -6,6 +6,6 @@ import { protectRoute } from "../middlewares/authMiddlewares.js";
 const router = express.Router();
 
 router.get("/linkedin", protectRoute, linkedinAuth);
-router.get("/linkedin/callback", linkedinCallback);
+router.get("/linkedin/callback",protectRoute, linkedinCallback);
 
 export default router;
