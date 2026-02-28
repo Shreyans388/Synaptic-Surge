@@ -1,78 +1,23 @@
-import mongoose, { Document, Model } from "mongoose";
 
-export interface IBrand extends Document {
+import { Schema, model, Types } from "mongoose";
+
+export interface IBrand {
+  user: Types.ObjectId;
   name: string;
-  image: string;
-  description: string;
-
-  brandVoice: {
-    tone: string;
-    keywords: string[];
-    bannedWords: string[];
-  };
-
-  platforms: {
-    linkedin?: {
-      encryptedAccessToken?: string | null;
-     
-      expiresAt?: Date | null;
-      accountId?: string | null;
-    };
-    instagram?: {
-      encryptedAccessToken?: string | null;
-     
-      expiresAt?: Date | null;
-      accountId?: string | null;
-    };
-    reddit?: {
-      encryptedAccessToken?: string | null;
-
-      expiresAt?: Date | null;
-      accountId?: string | null;
-    };
-  };
-
-  createdAt: Date;
-  updatedAt: Date;
+  description?: string;
+  brandVoice?: string;
+  logo?: string;
 }
 
-const brandSchema = new mongoose.Schema(
+const brandSchema = new Schema<IBrand>(
   {
-    name: { type: String, required: true, unique: true },
-    image: { type: String, required: true },
-    description: { type: String, required: true },
-
-    brandVoice: {
-      tone: { type: String, required: true },
-      keywords: [String],
-      bannedWords: [String],
-    },
-
-    platforms: {
-      linkedin: {
-        encryptedAccessToken: { type: String, default: null },
-       
-        expiresAt: { type: Date, default: null },
-        accountId: { type: String, default: null },
-      },
-      instagram: {
-        encryptedAccessToken: { type: String, default: null },
-       
-        expiresAt: { type: Date, default: null },
-        accountId: { type: String, default: null },
-      },
-      reddit: {
-        encryptedAccessToken: { type: String, default: null },
-
-        expiresAt: { type: Date, default: null },
-        accountId: { type: String, default: null },
-      },
-    },
+    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    name: { type: String, required: true },
+    description: String,
+    brandVoice: String,
+    logo: String,
   },
   { timestamps: true }
 );
 
-export const Brand: Model<IBrand> = mongoose.model<IBrand>(
-  "Brand",
-  brandSchema
-);
+export const Brand = model<IBrand>("Brand", brandSchema);

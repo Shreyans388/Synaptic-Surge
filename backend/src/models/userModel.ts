@@ -1,16 +1,15 @@
-import mongoose, { Document, Model, Types } from "mongoose";
 
-export interface IUser extends Document {
+import { Schema, model, Types } from "mongoose";
+
+export interface IUser {
   email: string;
   password: string;
   fullName: string;
   brandsId: Types.ObjectId[];
-  role:string;
-  createdAt: Date;
-  updatedAt: Date;
+  role: "user" | "admin";
 }
 
-const userSchema = new mongoose.Schema<IUser>(
+const userSchema = new Schema<IUser>(
   {
     email: {
       type: String,
@@ -26,21 +25,19 @@ const userSchema = new mongoose.Schema<IUser>(
       type: String,
       required: true,
     },
-    brandsId: {
-      type: [mongoose.Schema.Types.ObjectId],
-      default: [],
-    },
+    brandsId: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Brand",
+      },
+    ],
     role: {
       type: String,
       enum: ["user", "admin"],
       default: "user",
     },
   },
-  {
-    timestamps: true,
-  },
+  { timestamps: true }
 );
 
-const User: Model<IUser> = mongoose.model<IUser>("User", userSchema);
-
-export default User;
+export const User = model<IUser>("User", userSchema);

@@ -1,7 +1,11 @@
 import type { Request, Response } from "express";
 import axios from "axios";
-import { Brand } from "../models/brandModel.js";
-import { encrypt } from "../lib/utils.js";
+import { SocialAccount } from "../models/socialAccountModel.js";
+import { Types } from "mongoose";
+
+
+
+
 
 
 export const linkedinAuth = async (req: Request, res: Response) => {
@@ -18,20 +22,18 @@ export const linkedinAuth = async (req: Request, res: Response) => {
   res.redirect(authUrl);
 };
 
-export const linkedinCallback = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+
+export const linkedinCallback = async (req: Request, res: Response) => {
   try {
     const { code, state } = req.query;
-    const brandId = state as string;
 
-    if (!code || !brandId) {
-      res.status(400).json({ message: "Invalid OAuth callback" });
-      return;
+    if (!state || typeof state !== "string") {
+      return res.status(400).json({ message: "Invalid state" });
     }
 
-    // Exchange code for access token
+    const brandId = new Types.ObjectId(state);
+    const userId = req.user!._id;
+
     const tokenResponse = await axios.post(
       "https://www.linkedin.com/oauth/v2/accessToken",
       new URLSearchParams({
@@ -45,32 +47,24 @@ export const linkedinCallback = async (
     );
 
     const { access_token, expires_in } = tokenResponse.data;
+    const expiresAt = new Date(Date.now() + expires_in * 1000);
 
-    // Get LinkedIn profile (accountId)
-    const profileResponse = await axios.get(
-      "https://api.linkedin.com/v2/userinfo",
+    await SocialAccount.findOneAndUpdate(
       {
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      }
+        user: userId,
+        brand: brandId,
+        platform: "linkedin",
+      },
+      {
+        access_token,
+        expires_at: expiresAt,
+      },
+      { upsert: true, new: true }
     );
 
-    const accountId = profileResponse.data.sub;
-
-    const encryptedToken = encrypt(access_token);
-
-    await Brand.findByIdAndUpdate(brandId, {
-      "platforms.linkedin.encryptedAccessToken": encryptedToken,
-      "platforms.linkedin.expiresAt": new Date(
-        Date.now() + expires_in * 1000
-      ),
-      "platforms.linkedin.accountId": accountId,
-    });
-
-    res.json({ message: "LinkedIn connected successfully" });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "OAuth failed" });
+    return res.redirect(`${process.env.FRONTEND_URL}/success`);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: "LinkedIn OAuth failed" });
   }
 };

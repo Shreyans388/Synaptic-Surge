@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import jwt from "jsonwebtoken";
-import User from "../models/userModel.js";
+import {User} from "../models/userModel.js";
 import type { Types } from "mongoose";
 
 const router = Router();

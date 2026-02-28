@@ -1,15 +1,18 @@
 import type { Request, Response } from "express";
+import { Types } from "mongoose";
 import { Brand } from "../models/brandModel.js";
+import { SocialAccount } from "../models/socialAccountModel.js";
+
 
 export const createBrand = async (
   req: Request,
   res: Response
 ): Promise<void> => {
   try {
-    const { name, image, description, brandVoice } = req.body;
+    const { name, description, brandVoice, logo } = req.body;
 
-    if (!name || !image || !description || !brandVoice?.tone) {
-      res.status(400).json({ message: "Missing required fields" });
+    if (!name) {
+      res.status(400).json({ message: "Brand name is required" });
       return;
     }
 
@@ -21,13 +24,10 @@ export const createBrand = async (
 
     const brand = await Brand.create({
       name,
-      image,
       description,
-      brandVoice: {
-        tone: brandVoice.tone,
-        keywords: brandVoice.keywords || [],
-        bannedWords: brandVoice.bannedWords || [],
-      },
+      brandVoice,
+      logo,
+      user: req.user!._id,
     });
 
     res.status(201).json(brand);
@@ -37,47 +37,37 @@ export const createBrand = async (
   }
 };
 
+/* =====================================================
+   DISCONNECT PLATFORM
+===================================================== */
+
+interface DisconnectParams {
+  brandId: string;
+  provider: "linkedin" | "instagram" | "reddit";
+}
+
 export const disconnectPlatform = async (
-  req: Request,
+  req: Request & { params: DisconnectParams },
   res: Response
 ): Promise<void> => {
   try {
     const { brandId, provider } = req.params;
 
-    const brand = await Brand.findById(brandId);
-    if (!brand) {
-      res.status(404).json({ message: "Brand not found" });
+    if (!Types.ObjectId.isValid(brandId)) {
+      res.status(400).json({ message: "Invalid brandId" });
       return;
     }
 
-    switch (provider) {
-      case "linkedin":
-        brand.platforms.linkedin = {
-          encryptedAccessToken: null,
-          expiresAt: null,
-          accountId: null,
-        };
-        break;
-      case "instagram":
-        brand.platforms.instagram = {
-          encryptedAccessToken: null,
-          expiresAt: null,
-          accountId: null,
-        };
-        break;
-      case "reddit":
-        brand.platforms.reddit = {
-          encryptedAccessToken: null,
-          expiresAt: null,
-          accountId: null,
-        };
-        break;
-      default:
-        res.status(400).json({ message: "Invalid provider" });
-        return;
-    }
+    const deleted = await SocialAccount.findOneAndDelete({
+      brand: new Types.ObjectId(brandId),
+      platform: provider,
+      user: req.user!._id, // secure: ensure ownership
+    });
 
-    await brand.save();
+    if (!deleted) {
+      res.status(404).json({ message: "Platform not connected" });
+      return;
+    }
 
     res.status(200).json({
       message: `${provider} disconnected successfully`,
