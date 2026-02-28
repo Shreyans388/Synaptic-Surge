@@ -6,6 +6,7 @@ interface GlobalState {
   user: {
     id: string;
     name: string;
+    email?: string;
   } | null;
 
   activeBrand: {
@@ -34,20 +35,20 @@ interface GlobalState {
   removeNotification: (id: string) => void;
   token: string | null;
 
-  setAuth: (userId: string, token: string) => void;
+  setAuth: (
+    user: {
+      id: string;
+      name: string;
+      email?: string;
+    },
+    token?: string | null
+  ) => void;
   logout: () => void;
 }
 
 export const useGlobalStore = create<GlobalState>((set) => ({
-  user: {
-    id: "1",
-    name: "Rishu",
-  },
-
-  activeBrand: {
-    id: "b1",
-    name: "Demo Brand",
-  },
+  user: null,
+  activeBrand: null,
 
   theme: "light",
 
@@ -72,13 +73,16 @@ export const useGlobalStore = create<GlobalState>((set) => ({
     })),
   token: null,
 
-  setAuth: (userId, token) =>
-    set({ userId, token }),
+  setAuth: (user, token = null) =>
+    set({
+      user,
+      token,
+    }),
 
   logout: () =>
     set({
-      userId: null,
+      user: null,
       token: null,
-      activeBrandId: null,
+      activeBrand: null,
     }),
 }));

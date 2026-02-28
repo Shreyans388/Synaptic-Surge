@@ -1,14 +1,24 @@
 import express from "express";
 import cors from "cors";
-import authRoutes from "./routes/authRoutes.js"
-import oauthRoutes from "./routes/oauthRoutes.js"
-import brandRoutes from "./routes/brandRoutes.js"
-import devRoutes from "./routes/devRoutes.js"
-import cookieParser from "cookie-parser"
+import authRoutes from "./routes/authRoutes.js";
+import oauthRoutes from "./routes/oauthRoutes.js";
+import brandRoutes from "./routes/brandRoutes.js";
+import devRoutes from "./routes/devRoutes.js";
+import cookieParser from "cookie-parser";
 const app = express();
 
+const CLIENT_ORIGIN =
+  process.env.CLIENT_ORIGIN ?? "http://localhost:3000";
 
-app.use(cors());
+const corsOptions: cors.CorsOptions = {
+  origin: CLIENT_ORIGIN,
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+// Preflight requests (avoid "*" which can crash path-to-regexp in some setups)
+app.options(/.*/, cors(corsOptions));
+
 app.use(express.json());
 app.use(cookieParser());
 

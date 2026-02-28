@@ -20,7 +20,7 @@ export default function DashboardPage() {
     isError,
   } = useQuery<Post[]>({
     queryKey: ["posts", activeBrandId],
-    queryFn: () => getPosts(activeBrandId as string),
+    queryFn: () => getPosts(activeBrandId?.id as string),
     enabled: !!activeBrandId,
   });
 

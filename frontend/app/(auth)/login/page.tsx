@@ -2,10 +2,45 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useMutation } from "@tanstack/react-query";
+import { loginUser } from "@/services/api/auth.api";
+import { useGlobalStore } from "@/state/global.store";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const router = useRouter();
+  const setAuth = useGlobalStore((s) => s.setAuth);
+
+  const mutation = useMutation({
+    mutationFn: () => loginUser(email, password),
+    onSuccess: (user) => {
+      setAuth(
+        {
+          id: user._id,
+          name: user.fullName,
+          email: user.email,
+        },
+        null
+      );
+      setError(null);
+      router.push("/dashboard");
+    },
+    onError: (err: unknown) => {
+      const message =
+        err instanceof Error ? err.message : "Login failed";
+      setError(message);
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || !password || mutation.isPending) return;
+    mutation.mutate();
+  };
 
   return (
     <div className="app-grid flex min-h-screen items-center justify-center p-4">
@@ -17,13 +52,14 @@ export default function LoginPage() {
           <p className="mt-1 text-sm text-[var(--muted)]">Sign in to continue managing your content workspace.</p>
         </div>
 
-        <div className="space-y-4">
+        <form className="space-y-4" onSubmit={handleSubmit}>
           <input
             type="email"
             placeholder="Email"
             className="w-full border rounded px-3 py-2 dark:bg-gray-800 dark:border-gray-700"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            required
           />
 
           <input
@@ -32,12 +68,23 @@ export default function LoginPage() {
             className="w-full border rounded px-3 py-2 dark:bg-gray-800 dark:border-gray-700"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            required
           />
 
-          <button className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700">
-            Login
+          {error && (
+            <p className="text-sm text-red-500">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={mutation.isPending}
+            className="w-full bg-indigo-600 text-white py-2 rounded hover:bg-indigo-700 disabled:opacity-60"
+          >
+            {mutation.isPending ? "Logging in..." : "Login"}
           </button>
-        </div>
+        </form>
 
         <p className="text-sm text-center mt-6 text-gray-500">
           Don’t have an account?{" "}
