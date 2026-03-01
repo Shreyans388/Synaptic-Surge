@@ -1,6 +1,6 @@
 import { Schema, model, Types } from "mongoose";
 
-export type PlatformType = "linkedin" | "instagram" | "reddit";
+export type PlatformType = "linkedin" | "instagram" | "twitter" | "reddit";
 
 export interface ISocialAccount {
   user: Types.ObjectId;
@@ -17,7 +17,7 @@ const socialAccountSchema = new Schema<ISocialAccount>(
     brand: { type: Schema.Types.ObjectId, ref: "Brand", required: true },
     platform: {
       type: String,
-      enum: ["linkedin", "instagram", "reddit"],
+      enum: ["linkedin", "instagram", "twitter", "reddit"],
       required: true,
     },
     access_token: { type: String, required: true },

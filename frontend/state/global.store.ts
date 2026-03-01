@@ -48,7 +48,10 @@ interface GlobalState {
 
 export const useGlobalStore = create<GlobalState>((set) => ({
   user: null,
-  activeBrand: null,
+  activeBrand: {
+    id: "b1",
+    name: "Demo Brand",
+  },
 
   theme: "light",
 

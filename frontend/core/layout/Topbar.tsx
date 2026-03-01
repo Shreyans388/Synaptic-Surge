@@ -1,7 +1,9 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { useGlobalStore } from "@/state/global.store";
+import { getBrands } from "@/services/api/brand.api";
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -16,6 +18,12 @@ export default function Topbar() {
   const theme = useGlobalStore((state) => state.theme);
   const setTheme = useGlobalStore((state) => state.setTheme);
   const activeBrand = useGlobalStore((state) => state.activeBrand);
+  const setActiveBrand = useGlobalStore((state) => state.setActiveBrand);
+
+  const brandsQuery = useQuery({
+    queryKey: ["brands"],
+    queryFn: getBrands,
+  });
 
   return (
     <header className="sticky top-0 z-10 border-b border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_88%,transparent)] px-4 py-4 backdrop-blur-md md:px-6">
@@ -30,8 +38,25 @@ export default function Topbar() {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="hidden rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] px-3 py-2 text-xs text-[var(--muted)] sm:block">
-            Brand: <span className="font-medium text-[var(--foreground)]">{activeBrand?.name ?? "None"}</span>
+          <div className="hidden items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] px-3 py-2 text-xs text-[var(--muted)] sm:flex">
+            <span>Brand</span>
+            <select
+              value={activeBrand?.id ?? ""}
+              onChange={(e) => {
+                const selected = brandsQuery.data?.find((brand) => brand._id === e.target.value);
+                if (selected) {
+                  setActiveBrand({ id: selected._id, name: selected.name });
+                }
+              }}
+              className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-xs text-[var(--foreground)]"
+            >
+              <option value="">{brandsQuery.isLoading ? "Loading..." : "None"}</option>
+              {(brandsQuery.data ?? []).map((brand) => (
+                <option key={brand._id} value={brand._id}>
+                  {brand.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <button

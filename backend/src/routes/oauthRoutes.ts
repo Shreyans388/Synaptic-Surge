@@ -1,11 +1,11 @@
 import express from "express";
-import { linkedinAuth, linkedinCallback } from "../controllers/oauthController.js";
+import { oauthAuth, oauthCallback } from "../controllers/oauthController.js";
 import { protectRoute } from "../middlewares/authMiddlewares.js";
 
 
 const router = express.Router();
 
-router.get("/linkedin", protectRoute, linkedinAuth);
-router.get("/linkedin/callback",protectRoute, linkedinCallback);
+router.get("/:provider", protectRoute, oauthAuth);
+router.get("/:provider/callback", oauthCallback);
 
 export default router;
