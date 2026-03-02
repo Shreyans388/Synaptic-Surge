@@ -1,10 +1,10 @@
-import { Schema, model, Types } from "mongoose";
+import { Schema, model } from "mongoose";
 
 export interface IPostBatch {
   _id: string;
   user_id: string;
-  brandId: Types.ObjectId;
-  posts: Types.ObjectId[];
+  brandId: string;
+  posts: string[];
   status: "active" | "paused" | "completed";
   created_at: Date;
 }
@@ -23,16 +23,14 @@ const postBatchSchema = new Schema<IPostBatch>(
     },
 
     brandId: {
-      type: Schema.Types.ObjectId,
-      ref: "Brand",
+      type: String,
       required: true,
       index: true,
     },
 
     posts: [
       {
-        type: Schema.Types.ObjectId,
-        ref: "Post",
+        type: String,
       },
     ],
 

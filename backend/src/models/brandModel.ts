@@ -1,33 +1,37 @@
 
-import { Schema, model, Types } from "mongoose";
+import { Schema, model } from "mongoose";
+import { randomUUID } from "crypto";
 
 export interface IBrand {
-  user: Types.ObjectId;
-  name: string;
-  description?: string;
-  brandVoice?: string;
+  _id: string;
+  userId: string;
+  brand_name: string;
+  brand_voice?: string;
   logo?: string;
-  brandColors?: string[];
-  brandStyle?: string;
-  brandText?: string;
-  ctaStyle?: string;
-  logoUrl?: string;
-  logoPosition?: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
+  brand_colors?: string[];
+  brand_style?: string;
+  brand_text?: string;
+  cta_style?: string;
+  logo_url?: string;
+  logo_position?: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
 }
 
 const brandSchema = new Schema<IBrand>(
   {
-    user: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    name: { type: String, required: true },
-    description: String,
-    brandVoice: String,
+    _id: {
+      type: String,
+      default: () => randomUUID(),
+    },
+    userId: { type: String, required: true, index: true },
+    brand_name: { type: String, required: true },
+    brand_voice: String,
     logo: String,
-    brandColors: [{ type: String }],
-    brandStyle: String,
-    brandText: String,
-    ctaStyle: String,
-    logoUrl: String,
-    logoPosition: {
+    brand_colors: [{ type: String }],
+    brand_style: String,
+    brand_text: String,
+    cta_style: String,
+    logo_url: String,
+    logo_position: {
       type: String,
       enum: ["top-left", "top-right", "bottom-left", "bottom-right", "center"],
     },

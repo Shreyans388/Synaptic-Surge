@@ -1,7 +1,6 @@
 import type { Request, Response } from "express";
 import axios from "axios";
 import jwt from "jsonwebtoken";
-import { Types } from "mongoose";
 import { SocialAccount } from "../models/socialAccountModel.js";
 import type { PlatformType } from "../models/socialAccountModel.js";
 
@@ -64,8 +63,8 @@ export const oauthAuth = async (req: Request<{ provider: string }>, res: Respons
     return;
   }
 
-  if (!brandId || typeof brandId !== "string" || !Types.ObjectId.isValid(brandId)) {
-    res.status(400).json({ message: "Valid brandId is required" });
+  if (!brandId || typeof brandId !== "string") {
+    res.status(400).json({ message: "brandId is required" });
     return;
   }
 
@@ -123,8 +122,8 @@ export const oauthCallback = async (req: Request<{ provider: string }>, res: Res
       return;
     }
 
-    const brandId = new Types.ObjectId(payload.brandId);
-    const userId = new Types.ObjectId(payload.userId);
+    const brandId = payload.brandId;
+    const userId = payload.userId;
 
     if (provider === "linkedin") {
       if (
