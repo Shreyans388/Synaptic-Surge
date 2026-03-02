@@ -1,6 +1,5 @@
 import type { Request, Response } from "express";
 import axios from "axios";
-import { Types } from "mongoose";
 import { randomUUID } from "crypto";
 import { Post } from "../models/postModel.js";
 import { Brand } from "../models/brandModel.js";
@@ -100,7 +99,7 @@ const buildPlatformPosts = (content: Partial<Record<Platform, string>> | undefin
 
 const mapPostToFrontend = (post: {
   _id: string;
-  brandId: Types.ObjectId;
+  brandId: string;
   topic?: string;
   tone?: string;
   context?: string;
@@ -127,7 +126,7 @@ const mapPostToFrontend = (post: {
 
   return {
     id: post._id,
-    brandId: post.brandId.toString(),
+    brandId: post.brandId,
     masterBrief: {
       topic: post.topic ?? (post.content.slice(0, 80) || "Untitled"),
       goal: "Engagement",
@@ -154,7 +153,7 @@ const mapPostToFrontend = (post: {
 };
 
 interface ResolvedBrand {
-  _id: Types.ObjectId;
+  _id: string;
   brand_name: string;
   brand_colors?: string[];
   brand_style?: string;
@@ -165,16 +164,16 @@ interface ResolvedBrand {
   logo_position?: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
 }
 
-const getBrandByIdForUser = async (brandId: string, userId: Types.ObjectId) => {
+const getBrandByIdForUser = async (brandId: string, userId: string) => {
   return Brand.findOne({
-    _id: new Types.ObjectId(brandId),
+    _id: brandId,
     userId,
   })
     .select("_id brand_name brand_colors brand_style brand_text brand_voice cta_style logo_url logo_position")
     .lean();
 };
 
-const getBrandByNameForUser = async (brandName: string, userId: Types.ObjectId) => {
+const getBrandByNameForUser = async (brandName: string, userId: string) => {
   return Brand.findOne({
     brand_name: brandName,
     userId,
@@ -197,16 +196,13 @@ export const generatePostDraft = async (
 
     const requestedBrandId = safeText(req.body.brandId);
     const requestedBrandName = safeText(req.body.brand_name);
+    const authUserId = req.user!._id.toString();
 
     let brand: ResolvedBrand | null = null;
     if (requestedBrandId) {
-      if (!Types.ObjectId.isValid(requestedBrandId)) {
-        res.status(400).json({ message: "brandId must be a valid ObjectId" });
-        return;
-      }
-      brand = (await getBrandByIdForUser(requestedBrandId, req.user!._id)) as ResolvedBrand | null;
+      brand = (await getBrandByIdForUser(requestedBrandId, authUserId)) as ResolvedBrand | null;
     } else if (requestedBrandName) {
-      brand = (await getBrandByNameForUser(requestedBrandName, req.user!._id)) as ResolvedBrand | null;
+      brand = (await getBrandByNameForUser(requestedBrandName, authUserId)) as ResolvedBrand | null;
     } else {
       res.status(400).json({ message: "brand_name is required when brandId is not provided" });
       return;
@@ -218,7 +214,7 @@ export const generatePostDraft = async (
     }
 
     const workflow1Payload: Workflow1Input = {
-      userId: safeText(req.body.userId) ?? req.user!._id.toString(),
+      userId: safeText(req.body.userId) ?? authUserId,
       userEmail: safeText(req.body.userEmail) ?? req.user!.email,
       brand_name: safeText(req.body.brand_name) ?? safeText(brand.brand_name),
       brand_colors: safeStringArray(brand.brand_colors),
@@ -410,13 +406,13 @@ export const getPosts = async (
 ): Promise<void> => {
   try {
     const brandId = req.query.brandId;
-    if (!brandId || !Types.ObjectId.isValid(brandId)) {
-      res.status(400).json({ message: "Valid brandId query param is required" });
+    if (!brandId) {
+      res.status(400).json({ message: "brandId query param is required" });
       return;
     }
 
     const posts = await Post.find({
-      brandId: new Types.ObjectId(brandId),
+      brandId,
       user_id: req.user!._id.toString(),
       status: { $ne: "deleted" },
     })

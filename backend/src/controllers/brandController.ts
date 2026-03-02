@@ -1,5 +1,4 @@
 import type { Request, Response } from "express";
-import { Types } from "mongoose";
 import { Brand } from "../models/brandModel.js";
 import { SocialAccount } from "../models/socialAccountModel.js";
 import { User } from "../models/userModel.js";
@@ -124,19 +123,19 @@ export const createBrand = async (
       return;
     }
 
-    const existing = await Brand.findOne({ brand_name, userId: req.user!._id });
+    const existing = await Brand.findOne({ brand_name, userId: req.user!._id.toString() });
     if (existing) {
       res.status(400).json({ message: "Brand already exists" });
       return;
     }
 
     const brand = await Brand.create({
-      userId: req.user!._id,
+      userId: req.user!._id.toString(),
       ...payload,
     });
 
     await User.findByIdAndUpdate(req.user!._id, {
-      $addToSet: { brandsId: brand._id },
+      $addToSet: { brandsId: brand._id.toString() },
     });
 
     res.status(201).json(toBrandResponse(brand.toObject()));
@@ -152,7 +151,7 @@ export const updateBrand = async (
 ): Promise<void> => {
   try {
     const { brandId } = req.params;
-    if (!Types.ObjectId.isValid(brandId)) {
+    if (!brandId) {
       res.status(400).json({ message: "Invalid brandId" });
       return;
     }
@@ -161,7 +160,7 @@ export const updateBrand = async (
     delete payload.brand_name;
 
     const updated = await Brand.findOneAndUpdate(
-      { _id: new Types.ObjectId(brandId), userId: req.user!._id },
+      { _id: brandId, userId: req.user!._id.toString() },
       { $set: payload },
       { new: true }
     );
@@ -180,7 +179,7 @@ export const updateBrand = async (
 
 export const getBrands = async (req: Request, res: Response): Promise<void> => {
   try {
-    const userId = req.user!._id;
+    const userId = req.user!._id.toString();
     const brands = await Brand.find({ userId }).sort({ createdAt: -1 }).lean();
 
     if (brands.length === 0) {
@@ -188,7 +187,7 @@ export const getBrands = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const brandIds = brands.map((brand) => brand._id);
+    const brandIds = brands.map((brand) => brand._id.toString());
     const socialAccounts = await SocialAccount.find({
       user: userId,
       brand: { $in: brandIds },
@@ -224,15 +223,15 @@ export const getBrandConnections = async (
 ): Promise<void> => {
   try {
     const { brandId } = req.params;
-    if (!Types.ObjectId.isValid(brandId)) {
+    if (!brandId) {
       res.status(400).json({ message: "Invalid brandId" });
       return;
     }
 
-    const userId = req.user!._id;
+    const userId = req.user!._id.toString();
     const connections = await SocialAccount.find({
       user: userId,
-      brand: new Types.ObjectId(brandId),
+      brand: brandId,
     })
       .select("platform expires_at updatedAt")
       .lean();
@@ -256,15 +255,15 @@ export const disconnectPlatform = async (
   try {
     const { brandId, provider } = req.params;
 
-    if (!Types.ObjectId.isValid(brandId)) {
+    if (!brandId) {
       res.status(400).json({ message: "Invalid brandId" });
       return;
     }
 
     const deleted = await SocialAccount.findOneAndDelete({
-      brand: new Types.ObjectId(brandId),
+      brand: brandId,
       platform: provider,
-      user: req.user!._id,
+      user: req.user!._id.toString(),
     });
 
     if (!deleted) {

@@ -1,10 +1,10 @@
-import { Schema, model, Types } from "mongoose";
+import { Schema, model } from "mongoose";
 
 export interface IPost {
   _id: string;
   batch_id: string;
   user_id: string;
-  brandId: Types.ObjectId;
+  brandId: string;
   topic?: string;
   tone?: string;
   post_details?: string;
@@ -66,8 +66,7 @@ const postSchema = new Schema<IPost>(
     },
 
     brandId: {
-      type: Schema.Types.ObjectId,
-      ref: "Brand",
+      type: String,
       required: true,
       index: true,
     },

@@ -1,10 +1,9 @@
 import jwt from "jsonwebtoken";
 import type { Response } from "express";
-import type { Types } from "mongoose";
 import crypto from "crypto";
 
 export const generateToken = (
-  userId: Types.ObjectId | string,
+  userId: string,
   res: Response
 ): string => {
   const token = jwt.sign(

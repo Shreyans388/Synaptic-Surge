@@ -1,14 +1,12 @@
-import { Types } from "mongoose";
-
 declare global {
   namespace Express {
     interface Request {
       user?: {
-        _id: Types.ObjectId;
+        _id: string;
         email: string;
         fullName: string;
         role: "user" | "admin";
-        brandsId: Types.ObjectId[];
+        brandsId: string[];
       };
     }
   }

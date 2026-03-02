@@ -4,7 +4,6 @@ import type { JwtPayload } from "jsonwebtoken";
 
 import  {User } from "../models/userModel.js";
 import type {IUser} from "../models/userModel.js";
-import type { Types } from "mongoose";
 
 interface CustomJwtPayload extends JwtPayload {
   userId: string;
@@ -45,7 +44,7 @@ export const protectRoute = async (
 
    const user = await User.findById(decoded.userId)
   .select("-password")
-  .lean<Omit<IUser, "password"> & { _id: Types.ObjectId }>();
+  .lean<Omit<IUser, "password"> & { _id: string }>();
 
     if (!user) {
       res.status(404).json({ message: "User not found" });
