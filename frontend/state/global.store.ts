@@ -2,61 +2,36 @@ import { create } from "zustand";
 
 type SystemStatus = "idle" | "generating" | "monitoring";
 
+interface ActiveBrand {
+  _id: string;
+  name: string;
+}
+
+interface Notification {
+  id: string;
+  message: string;
+  type: "info" | "success" | "error";
+}
+
 interface GlobalState {
-  user: {
-    id: string;
-    name: string;
-    email?: string;
-  } | null;
-
-  activeBrand: {
-    id: string;
-    name: string;
-  } | null;
-
+  activeBrand: ActiveBrand | null;
   theme: "light" | "dark";
-
   systemStatus: SystemStatus;
-
-  notifications: {
-    id: string;
-    message: string;
-    type: "info" | "success" | "error";
-  }[];
+  notifications: Notification[];
 
   setTheme: (theme: "light" | "dark") => void;
-  setActiveBrand: (brand: { id: string; name: string }) => void;
+  setActiveBrand: (brand: ActiveBrand | null) => void;
   setSystemStatus: (status: SystemStatus) => void;
-  addNotification: (notification: {
-    id: string;
-    message: string;
-    type: "info" | "success" | "error";
-  }) => void;
-  removeNotification: (id: string) => void;
-  token: string | null;
 
-  setAuth: (
-    user: {
-      id: string;
-      name: string;
-      email?: string;
-    },
-    token?: string | null
-  ) => void;
-  logout: () => void;
+  addNotification: (notification: Notification) => void;
+  removeNotification: (id: string) => void;
+  resetAppState: () => void;
 }
 
 export const useGlobalStore = create<GlobalState>((set) => ({
-  user: null,
-  activeBrand: {
-    id: "b1",
-    name: "Demo Brand",
-  },
-
+  activeBrand: null,
   theme: "light",
-
   systemStatus: "idle",
-
   notifications: [],
 
   setTheme: (theme) => set({ theme }),
@@ -72,20 +47,15 @@ export const useGlobalStore = create<GlobalState>((set) => ({
 
   removeNotification: (id) =>
     set((state) => ({
-      notifications: state.notifications.filter((n) => n.id !== id),
+      notifications: state.notifications.filter(
+        (n) => n.id !== id
+      ),
     })),
-  token: null,
 
-  setAuth: (user, token = null) =>
+  resetAppState: () =>
     set({
-      user,
-      token,
-    }),
-
-  logout: () =>
-    set({
-      user: null,
-      token: null,
       activeBrand: null,
+      systemStatus: "idle",
+      notifications: [],
     }),
 }));

@@ -1,11 +1,9 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import AppLayout from "@/core/layout/AppLayout";
-import { checkAuth } from "@/services/api/auth.api";
-import { useGlobalStore } from "@/state/global.store";
+import { useAuthStore } from "@/state/auth.store";
 
 const PUBLIC_ROUTES = new Set(["/", "/login", "/signup"]);
 
@@ -16,44 +14,35 @@ export default function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [authChecked, setAuthChecked] = useState(false);
-  const setAuth = useGlobalStore((state) => state.setAuth);
-  const logout = useGlobalStore((state) => state.logout);
+
+  const {
+    user,
+    isCheckingAuth,
+    checkAuth,
+    logout,
+  } = useAuthStore();
+
   const isPublicRoute =
-    !!pathname && Array.from(PUBLIC_ROUTES).some((route) => pathname === route);
+    !!pathname && PUBLIC_ROUTES.has(pathname);
 
   useEffect(() => {
-    let mounted = true;
-    const syncAuth = async () => {
-      const user = await checkAuth();
-      if (!mounted) return;
+    checkAuth();
+  }, [checkAuth]);
 
-      if (user) {
-        setAuth({
-          id: user._id,
-          name: user.fullName,
-          email: user.email,
-        });
-        if (isPublicRoute && (pathname === "/login" || pathname === "/signup")) {
-          router.replace("/dashboard");
-        }
-      } else {
-        logout();
-        if (!isPublicRoute) {
-          router.replace("/login");
-        }
-      }
+  useEffect(() => {
+    if (isCheckingAuth) return;
 
-      setAuthChecked(true);
-    };
+    if (!user && !isPublicRoute) {
+      router.replace("/login");
+      return;
+    }
 
-    syncAuth();
-    return () => {
-      mounted = false;
-    };
-  }, [isPublicRoute, logout, pathname, router, setAuth]);
+    if (user && (pathname === "/login" || pathname === "/signup")) {
+      router.replace("/dashboard");
+    }
+  }, [user, isCheckingAuth, isPublicRoute, pathname, router]);
 
-  if (!authChecked && !isPublicRoute) {
+  if (isCheckingAuth && !isPublicRoute) {
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-[var(--muted)]">
         Loading workspace...

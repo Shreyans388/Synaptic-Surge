@@ -123,28 +123,38 @@ export const createBrand = async (
       return;
     }
 
-    const existing = await Brand.findOne({ brand_name, userId: req.user!._id.toString() });
+    // req.user._id is already an ObjectId from your auth middleware
+    const authUserId = req.user!._id;
+
+    // 1. Check if brand exists for this specific user
+    const existing = await Brand.findOne({ 
+      brand_name, 
+      userId: authUserId 
+    });
+
     if (existing) {
       res.status(400).json({ message: "Brand already exists" });
       return;
     }
 
+    // 2. Create the brand - Mongoose handles the string-to-ObjectId conversion for userId
     const brand = await Brand.create({
-      userId: req.user!._id.toString(),
       ...payload,
+      userId: authUserId,
     });
 
-    await User.findByIdAndUpdate(req.user!._id, {
-      $addToSet: { brandsId: brand._id.toString() },
+    // 3. Update User's brand list
+    // Note: brand._id is a UUID string based on your previous schema
+    await User.findByIdAndUpdate(authUserId, {
+      $addToSet: { brandsId: brand._id }, 
     });
 
     res.status(201).json(toBrandResponse(brand.toObject()));
   } catch (error) {
-    console.error(error);
+    console.error("Create Brand Error:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
-
 export const updateBrand = async (
   req: Request<{ brandId: string }>,
   res: Response
