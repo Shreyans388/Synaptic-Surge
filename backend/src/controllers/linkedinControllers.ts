@@ -70,7 +70,7 @@ export const handleLinkedInCallback = async (req: Request, res: Response) => {
       {
         access_token,
         expires_at: expiresAt,
-        meta: { linkedInPersonId: linkedInId, accountName: linkedInName }
+        meta: { linkedin_urn: linkedInId, accountName: linkedInName }
       },
       { upsert: true, returnDocument: 'after' } 
     );

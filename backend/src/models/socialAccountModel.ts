@@ -1,6 +1,6 @@
 import { Schema, model, Types } from "mongoose";
 
-export type PlatformType = "linkedin" | "instagram" | "twitter" | "reddit";
+export type PlatformType = "linkedin"| "facebook" | "instagram" | "twitter" | "reddit";
 
 export interface ISocialAccount {
   _id: Types.ObjectId; // Let Mongo handle this
