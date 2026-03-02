@@ -43,7 +43,10 @@ const socialAccountSchema = new Schema<ISocialAccount>(
 
     meta: Schema.Types.Mixed,
   },
-  { timestamps: true }
+  { 
+    timestamps: true,
+    collection: "social_accounts" 
+   }
 );
 
 // Prevent duplicate platform connection per brand

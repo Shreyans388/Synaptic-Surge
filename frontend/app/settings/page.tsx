@@ -4,11 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import type { ComponentType } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Linkedin, Instagram, Twitter, Plus } from "lucide-react";
-import { useGlobalStore } from "@/state/global.store";
 import { useRouter, useSearchParams } from "next/navigation";
+
+// Stores
+import { useGlobalStore } from "@/state/global.store";
+import { useAuthStore } from "@/state/auth.store";
+
+// API Services
 import { logoutUser } from "@/services/api/auth.api";
+import axiosInstance from "@/services/axios"; // Adjust path if your axios instance is located elsewhere
 import {
-  buildOauthConnectUrl,
   createBrand,
   disconnectPlatform,
   getBrandConnections,
@@ -31,68 +36,75 @@ const PROVIDERS: Array<{
 ];
 
 export default function SettingsPage() {
-  const theme = useGlobalStore((s) => s.theme);
-  const setTheme = useGlobalStore((s) => s.setTheme);
-  const activeBrand = useGlobalStore((s) => s.activeBrand);
-  const setActiveBrand = useGlobalStore((s) => s.setActiveBrand);
-  const logout = useGlobalStore((s) => s.logout);
   const router = useRouter();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
 
+  // Global Store
+  const theme = useGlobalStore((s) => s.theme);
+  const setTheme = useGlobalStore((s) => s.setTheme);
+  const activeBrand = useGlobalStore((s) => s.activeBrand);
+  const setActiveBrand = useGlobalStore((s) => s.setActiveBrand);
+
+  // Auth Store
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+
   const [newBrandName, setNewBrandName] = useState("");
+  const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
 
-  const oauthStatus = searchParams.get("status");
-  const oauthProvider = searchParams.get("oauth");
+  const oauthStatus = searchParams.get("status") || searchParams.get("linkedin_connected");
+  const oauthProvider = searchParams.get("oauth") || "linkedin";
 
+  // Queries
   const brandsQuery = useQuery({
     queryKey: ["brands"],
     queryFn: getBrands,
   });
 
+  const connectionsQuery = useQuery({
+    queryKey: ["brand-connections", activeBrand?._id],
+    queryFn: () => getBrandConnections(activeBrand!._id),
+    enabled: Boolean(activeBrand?._id),
+  });
+
+  // Effects & Computed Data
   useEffect(() => {
     if (activeBrand || !brandsQuery.data?.length) return;
     const first = brandsQuery.data[0];
-    setActiveBrand({ id: first._id, name: first.name });
+    setActiveBrand({ _id: first._id, name: first.name });
   }, [activeBrand, brandsQuery.data, setActiveBrand]);
 
   const selectedBrandRecord =
-    activeBrand?.id && brandsQuery.data
-      ? brandsQuery.data.find((brand) => brand._id === activeBrand.id) ?? null
+    activeBrand?._id && brandsQuery.data
+      ? brandsQuery.data.find((brand) => brand._id === activeBrand._id) ?? null
       : null;
-
-  const connectionsQuery = useQuery({
-    queryKey: ["brand-connections", activeBrand?.id],
-    queryFn: () => getBrandConnections(activeBrand!.id),
-    enabled: Boolean(activeBrand?.id),
-  });
 
   const connectedPlatforms = useMemo(
     () => new Set((connectionsQuery.data ?? []).map((item) => item.platform)),
     [connectionsQuery.data]
   );
 
+  // Mutations
   const createBrandMutation = useMutation({
     mutationFn: () => createBrand({ name: newBrandName.trim() }),
     onSuccess: (brand: BrandRecord) => {
       setNewBrandName("");
-      setActiveBrand({ id: brand._id, name: brand.name });
+      setActiveBrand({ _id: brand._id, name: brand.name });
       queryClient.invalidateQueries({ queryKey: ["brands"] });
     },
   });
 
   const saveProfileMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      if (!activeBrand) {
-        throw new Error("No active brand selected");
-      }
+      if (!activeBrand) throw new Error("No active brand selected");
 
       const brandColors = String(formData.get("brandColors") ?? "")
         .split(",")
         .map((item) => item.trim())
         .filter(Boolean);
 
-      return updateBrand(activeBrand.id, {
+      return updateBrand(activeBrand._id, {
         brandColors,
         brandStyle: String(formData.get("brandStyle") ?? "").trim() || undefined,
         brandText: String(formData.get("brandText") ?? "").trim() || undefined,
@@ -106,6 +118,7 @@ export default function SettingsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["brands"] });
+      alert("Profile saved successfully!");
     },
   });
 
@@ -113,7 +126,7 @@ export default function SettingsPage() {
     mutationFn: ({ brandId, provider }: { brandId: string; provider: SocialProvider }) =>
       disconnectPlatform(brandId, provider),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["brand-connections", activeBrand?.id] });
+      queryClient.invalidateQueries({ queryKey: ["brand-connections", activeBrand?._id] });
       queryClient.invalidateQueries({ queryKey: ["brands"] });
     },
   });
@@ -126,35 +139,56 @@ export default function SettingsPage() {
     },
   });
 
+ // OAuth Connect Handler
+  const handleOAuthConnect = async (providerKey: string) => {
+    if (!user?._id) return alert("Please log in first.");
+    if (!activeBrand?._id) return alert("Please select a brand first.");
+
+    try {
+      setConnectingProvider(providerKey);
+      // Fetch the auth URL from your backend
+      const res = await axiosInstance.get(`/auth/${providerKey}/url?userId=${user._id}&brandId=${activeBrand._id}`);
+      
+      if (res.data.url) {
+        // FIX: Use .assign() instead of mutating .href directly
+        window.location.assign(res.data.url); 
+      }
+    } catch (error) {
+      console.error(`Failed to connect to ${providerKey}:`, error);
+      alert(`Could not initiate ${providerKey} connection.`);
+      setConnectingProvider(null);
+    }
+  };
+
   return (
     <div className="max-w-4xl space-y-8 p-6">
       <h1 className="text-2xl font-semibold">Settings</h1>
 
-      <section className="space-y-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+      <section className="space-y-3 rounded-2xl border border-(--border) bg-(--surface) p-5">
         <h2 className="text-lg font-semibold">Theme</h2>
         <button
           onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-          className="focus-ring rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] px-4 py-2 text-sm font-medium hover:border-[var(--border-strong)]"
+          className="focus-ring rounded-xl border border-(--border) bg-(--surface-elevated) px-4 py-2 text-sm font-medium hover:border-(--border-strong)"
         >
           Switch to {theme === "light" ? "dark" : "light"} mode
         </button>
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+      <section className="space-y-4 rounded-2xl border border-(--border) bg-(--surface) p-5">
         <div>
           <h2 className="text-lg font-semibold">Brands</h2>
-          <p className="text-sm text-[var(--muted)]">Select the active brand used across dashboard, studio, and social connections.</p>
+          <p className="text-sm text-(--muted)">Select the active brand used across dashboard, studio, and social connections.</p>
         </div>
 
         <div className="flex flex-wrap gap-2">
           {(brandsQuery.data ?? []).map((brand) => (
             <button
               key={brand._id}
-              onClick={() => setActiveBrand({ id: brand._id, name: brand.name })}
+              onClick={() => setActiveBrand({ _id: brand._id, name: brand.name })}
               className={`rounded-lg border px-3 py-2 text-sm transition ${
-                activeBrand?.id === brand._id
+                activeBrand?._id === brand._id
                   ? "border-sky-500 bg-sky-500/10 text-sky-700 dark:text-sky-300"
-                  : "border-[var(--border)] hover:border-[var(--border-strong)]"
+                  : "border-(--border) hover:border-(--border-strong)"
               }`}
             >
               {brand.name}
@@ -174,7 +208,7 @@ export default function SettingsPage() {
             value={newBrandName}
             onChange={(e) => setNewBrandName(e.target.value)}
             placeholder="Add a new brand"
-            className="flex-1 rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+            className="flex-1 rounded-xl border border-(--border) bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
           />
           <button
             type="submit"
@@ -186,14 +220,14 @@ export default function SettingsPage() {
         </form>
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+      <section className="space-y-4 rounded-2xl border border-(--border) bg-(--surface) p-5">
         <div>
           <h2 className="text-lg font-semibold">Brand Profile</h2>
-          <p className="text-sm text-[var(--muted)]">Save voice and creative metadata for this brand.</p>
+          <p className="text-sm text-(--muted)">Save voice and creative metadata for this brand.</p>
         </div>
 
         {!activeBrand || !selectedBrandRecord ? (
-          <p className="text-sm text-[var(--muted)]">Create or select a brand first.</p>
+          <p className="text-sm text-(--muted)">Create or select a brand first.</p>
         ) : (
           <form
             key={selectedBrandRecord._id}
@@ -208,36 +242,36 @@ export default function SettingsPage() {
                 name="brandColors"
                 defaultValue={(selectedBrandRecord.brandColors ?? []).join(", ")}
                 placeholder="Brand colors (comma separated)"
-                className="rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                className="rounded-xl border border-(--border) bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
               />
               <input
                 name="brandStyle"
                 defaultValue={selectedBrandRecord.brandStyle ?? ""}
                 placeholder="Brand style"
-                className="rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                className="rounded-xl border border-(--border) bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
               />
               <input
                 name="brandVoice"
                 defaultValue={selectedBrandRecord.brandVoice ?? ""}
                 placeholder="Brand voice"
-                className="rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                className="rounded-xl border border-(--border) bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
               />
               <input
                 name="ctaStyle"
                 defaultValue={selectedBrandRecord.ctaStyle ?? ""}
                 placeholder="CTA style"
-                className="rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                className="rounded-xl border border-(--border) bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
               />
               <input
                 name="logoUrl"
                 defaultValue={selectedBrandRecord.logoUrl ?? selectedBrandRecord.logo ?? ""}
                 placeholder="Logo URL"
-                className="rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                className="rounded-xl border border-(--border) bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
               />
               <select
                 name="logoPosition"
                 defaultValue={(selectedBrandRecord.logoPosition as LogoPosition | undefined) ?? "top-right"}
-                className="rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                className="rounded-xl border border-(--border) bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
               >
                 <option value="top-left">Logo Top Left</option>
                 <option value="top-right">Logo Top Right</option>
@@ -252,7 +286,7 @@ export default function SettingsPage() {
               defaultValue={selectedBrandRecord.brandText ?? ""}
               placeholder="Brand text"
               rows={4}
-              className="w-full rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+              className="w-full rounded-xl border border-(--border) bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
             />
 
             <button
@@ -266,29 +300,30 @@ export default function SettingsPage() {
         )}
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+      <section className="space-y-4 rounded-2xl border border-(--border) bg-(--surface) p-5">
         <div>
           <h2 className="text-lg font-semibold">Social Connections</h2>
-          <p className="text-sm text-[var(--muted)]">Connect LinkedIn, Instagram, and Twitter for your active brand.</p>
+          <p className="text-sm text-(--muted)">Connect LinkedIn, Instagram, and Twitter for your active brand.</p>
         </div>
 
         {!activeBrand ? (
-          <p className="text-sm text-[var(--muted)]">Create or select a brand first.</p>
+          <p className="text-sm text-(--muted)">Create or select a brand first.</p>
         ) : (
           <>
-            {oauthStatus ? (
-              <p className={`text-sm ${oauthStatus === "connected" ? "text-green-600" : "text-amber-600"}`}>
-                OAuth {oauthProvider ? `(${oauthProvider}) ` : ""}status: {oauthStatus}
+            {oauthStatus && (
+              <p className={`text-sm ${oauthStatus === "connected" || oauthStatus === "true" ? "text-green-600" : "text-amber-600"}`}>
+                OAuth {oauthProvider ? `(${oauthProvider}) ` : ""}status: {oauthStatus === "true" ? "connected" : oauthStatus}
               </p>
-            ) : null}
+            )}
 
             <div className="grid gap-3 md:grid-cols-3">
               {PROVIDERS.map((provider) => {
                 const Icon = provider.icon;
                 const isConnected = connectedPlatforms.has(provider.key);
+                const isConnectingThis = connectingProvider === provider.key;
 
                 return (
-                  <article key={provider.key} className="rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] p-4">
+                  <article key={provider.key} className="rounded-xl border border-(--border) bg-(--surface-elevated) p-4">
                     <div className="mb-4 flex items-center justify-between">
                       <div className="inline-flex items-center gap-2 text-sm font-semibold">
                         <Icon size={16} /> {provider.label}
@@ -306,19 +341,20 @@ export default function SettingsPage() {
 
                     {isConnected ? (
                       <button
-                        onClick={() => disconnectMutation.mutate({ brandId: activeBrand.id, provider: provider.key })}
+                        onClick={() => disconnectMutation.mutate({ brandId: activeBrand._id, provider: provider.key })}
                         disabled={disconnectMutation.isPending}
-                        className="w-full rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:hover:bg-red-950/20"
+                        className="w-full rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:hover:bg-red-950/20 disabled:opacity-50"
                       >
-                        Disconnect
+                        {disconnectMutation.isPending ? "Disconnecting..." : "Disconnect"}
                       </button>
                     ) : (
-                      <a
-                        href={buildOauthConnectUrl(provider.key, activeBrand.id)}
-                        className="block w-full rounded-lg bg-sky-600 px-3 py-2 text-center text-sm font-semibold text-white hover:bg-sky-700"
+                      <button
+                        onClick={() => handleOAuthConnect(provider.key)}
+                        disabled={isConnectingThis}
+                        className="w-full rounded-lg bg-sky-600 px-3 py-2 text-center text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-50"
                       >
-                        Connect {provider.label}
-                      </a>
+                        {isConnectingThis ? "Redirecting..." : `Connect ${provider.label}`}
+                      </button>
                     )}
                   </article>
                 );
@@ -328,7 +364,7 @@ export default function SettingsPage() {
         )}
       </section>
 
-      <section className="space-y-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+      <section className="space-y-3 rounded-2xl border border-(--border) bg-(--surface) p-5">
         <h2 className="text-lg font-semibold">Account</h2>
         <button
           onClick={() => logoutMutation.mutate()}

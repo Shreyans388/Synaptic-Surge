@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import axiosInstance from "@/services/axios";
-
+import { isAxiosError } from "axios";
 //
 // Types (aligned with backend)
 //
@@ -10,14 +10,13 @@ export type LogoPosition =
   | "top-right"
   | "bottom-left"
   | "bottom-right"
-  | "center";
 
 export type PlatformType =
   | "instagram"
   | "twitter"
   | "linkedin"
-  | "tiktok"
-  | "youtube";
+  | "reddit"
+  | "facebook";
 
 export interface Brand {
   _id: string;
@@ -65,6 +64,7 @@ interface BrandState {
     brandId: string,
     provider: PlatformType
   ) => Promise<void>;
+  getOAuthUrl: (platform: PlatformType, userId: string, brandId: string) => Promise<string>;
 }
 
 //
@@ -111,11 +111,9 @@ export const useBrandStore = create<BrandState>((set, get) => ({
   createBrand: async (data) => {
     try {
       set({ isCreatingBrand: true });
-
       const res = await axiosInstance.post("/brands", data);
-
       const newBrand = res.data;
-
+      
       set((state) => ({
         brands: [newBrand, ...state.brands],
         activeBrand: newBrand,
@@ -123,11 +121,10 @@ export const useBrandStore = create<BrandState>((set, get) => ({
       }));
 
       return newBrand;
-    } catch (err: any) {
+    } catch (err) { // <-- Removed :any
       set({ isCreatingBrand: false });
-      throw new Error(
-        err.response?.data?.message || "Failed to create brand"
-      );
+      const message = isAxiosError(err) ? err.response?.data?.message : "Failed to create brand";
+      throw new Error(message);
     }
   },
 
@@ -137,29 +134,18 @@ export const useBrandStore = create<BrandState>((set, get) => ({
   updateBrand: async (brandId, data) => {
     try {
       set({ isUpdatingBrand: true });
-
-      const res = await axiosInstance.patch(
-        `/brands/${brandId}`,
-        data
-      );
-
+      const res = await axiosInstance.patch(`/brands/${brandId}`, data);
       const updated = res.data;
 
       set((state) => ({
-        brands: state.brands.map((b) =>
-          b._id === brandId ? updated : b
-        ),
-        activeBrand:
-          state.activeBrand?._id === brandId
-            ? updated
-            : state.activeBrand,
+        brands: state.brands.map((b) => (b._id === brandId ? updated : b)),
+        activeBrand: state.activeBrand?._id === brandId ? updated : state.activeBrand,
         isUpdatingBrand: false,
       }));
-    } catch (err: any) {
+    } catch (err) { // <-- Removed :any
       set({ isUpdatingBrand: false });
-      throw new Error(
-        err.response?.data?.message || "Failed to update brand"
-      );
+      const message = isAxiosError(err) ? err.response?.data?.message : "Failed to update brand";
+      throw new Error(message);
     }
   },
 
@@ -199,31 +185,32 @@ export const useBrandStore = create<BrandState>((set, get) => ({
   //
   disconnectPlatform: async (brandId, provider) => {
     try {
-      await axiosInstance.delete(
-        `/brands/${brandId}/disconnect/${provider}`
-      );
+      await axiosInstance.delete(`/brands/${brandId}/disconnect/${provider}`);
 
-      // remove from connections
       set((state) => ({
-        connections: state.connections.filter(
-          (c) => c.platform !== provider
-        ),
+        connections: state.connections.filter((c) => c.platform !== provider),
         brands: state.brands.map((brand) =>
           brand._id === brandId
             ? {
                 ...brand,
-                connectedPlatforms:
-                  brand.connectedPlatforms?.filter(
-                    (p) => p !== provider
-                  ) ?? [],
+                connectedPlatforms: brand.connectedPlatforms?.filter((p) => p !== provider) ?? [],
               }
             : brand
         ),
       }));
-    } catch (err: any) {
-      throw new Error(
-        err.response?.data?.message || "Failed to disconnect platform"
-      );
+    } catch (err) { // <-- Removed :any
+      const message = isAxiosError(err) ? err.response?.data?.message : "Failed to disconnect platform";
+      throw new Error(message);
     }
   },
+
+  getOAuthUrl: async (platform, userId, brandId) => {
+    try {
+      const res = await axiosInstance.get(`/auth/${platform}/url?userId=${userId}&brandId=${brandId}`);
+      return res.data.url;
+    } catch (err) { // <-- Removed :any
+      const message = isAxiosError(err) ? err.response?.data?.message : `Failed to get ${platform} auth URL`;
+      throw new Error(message);
+    }
+  }
 }));
