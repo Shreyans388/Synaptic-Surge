@@ -5,15 +5,33 @@ export interface IPost {
   batch_id: string;
   user_id: string;
   brandId: Types.ObjectId;
+  topic?: string;
+  tone?: string;
+  post_details?: string;
+  context?: string;
+  image_preference?: string;
+  image_prompt?: string;
+  reference_image_url?: string;
 
   content: string;
   image_url?: string;
+  title_default?: string;
+  title_reddit?: string;
+  tags?: string[];
+  platforms?: string[];
+  scheduled_time?: Date | null;
 
   platform_posts: {
     linkedin?: string;
     instagram?: string;
     reddit?: string;
+    twitter?: string;
   };
+
+  workflow1_output?: Record<string, unknown>;
+  workflow2_output?: Record<string, unknown>;
+  review_status?: "draft" | "awaiting_review" | "published" | "rejected";
+  published_at?: Date;
 
   tracking: {
     enabled: boolean;
@@ -39,7 +57,6 @@ const postSchema = new Schema<IPost>(
     batch_id: {
       type: String,
       required: true,
-      index: true,
     },
 
     user_id: {
@@ -54,6 +71,27 @@ const postSchema = new Schema<IPost>(
       required: true,
       index: true,
     },
+    topic: {
+      type: String,
+    },
+    tone: {
+      type: String,
+    },
+    post_details: {
+      type: String,
+    },
+    context: {
+      type: String,
+    },
+    image_preference: {
+      type: String,
+    },
+    image_prompt: {
+      type: String,
+    },
+    reference_image_url: {
+      type: String,
+    },
 
     content: {
       type: String,
@@ -63,11 +101,46 @@ const postSchema = new Schema<IPost>(
     image_url: {
       type: String,
     },
+    title_default: {
+      type: String,
+    },
+    title_reddit: {
+      type: String,
+    },
+    tags: [
+      {
+        type: String,
+      },
+    ],
+    platforms: [
+      {
+        type: String,
+      },
+    ],
+    scheduled_time: {
+      type: Date,
+      default: null,
+    },
 
     platform_posts: {
       linkedin: { type: String },
       instagram: { type: String },
       reddit: { type: String },
+      twitter: { type: String },
+    },
+    workflow1_output: {
+      type: Schema.Types.Mixed,
+    },
+    workflow2_output: {
+      type: Schema.Types.Mixed,
+    },
+    review_status: {
+      type: String,
+      enum: ["draft", "awaiting_review", "published", "rejected"],
+      default: "awaiting_review",
+    },
+    published_at: {
+      type: Date,
     },
 
     tracking: {
@@ -81,7 +154,6 @@ const postSchema = new Schema<IPost>(
       },
       next_run_at: {
         type: Date,
-        index: true,
       },
       expires_at: {
         type: Date,

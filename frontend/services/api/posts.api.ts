@@ -1,63 +1,67 @@
+import { apiRequest } from "@/services/api/client";
 import { Post } from "@/types/domain.type";
-import { mockPosts } from "../mocks/posts.mock";
 
-const delay = (ms: number) =>
-  new Promise((resolve) => setTimeout(resolve, ms));
+export interface GenerateWorkflow1Payload {
+  brandId?: string;
+  userId?: string;
+  userEmail?: string;
+  brand_name?: string;
+  topic: string;
+  tone: string;
+  post_details: string;
+  context: string;
+  image_preference: string;
+  image_prompt: string;
+  reference_image_url: string;
+}
 
-export const getPosts = async (
-  brandId: string
-): Promise<Post[]> => {
-  await delay(600);
-  return mockPosts.filter((p) => p.brandId === brandId);
+interface CreateAndPublishResponse {
+  post: Post;
+  workflow1: unknown;
+}
+
+interface PublishPostResponse {
+  post: Post;
+  workflow2: unknown;
+}
+
+export const getPosts = async (brandId: string): Promise<Post[]> => {
+  const params = new URLSearchParams({ brandId });
+  return apiRequest<Post[]>(`/api/posts?${params.toString()}`, {
+    method: "GET",
+  });
 };
 
-export const approvePost = async (postId: string) => {
-  await delay(500);
+export const approvePost = async (postId: string): Promise<Post> => {
+  return apiRequest<Post>(`/api/posts/${postId}/approve`, {
+    method: "POST",
+  });
+};
 
-  const post = mockPosts.find((p) => p.id === postId);
-  if (!post) throw new Error("Post not found");
+export const generateDraftPost = async (
+  payload: GenerateWorkflow1Payload
+): Promise<CreateAndPublishResponse> => {
+  return apiRequest<CreateAndPublishResponse>("/api/posts/generate", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+};
 
-  post.overallStatus = "published";
-  post.publishedAt = new Date().toISOString();
-
-  post.platformDrafts = post.platformDrafts.map((d) => ({
-    ...d,
-    status: "published",
-  }));
-
-  return post;
+export const publishDraftPost = async (
+  postId: string,
+  scheduled_time?: string | null
+): Promise<PublishPostResponse> => {
+  return apiRequest<PublishPostResponse>(`/api/posts/${postId}/publish`, {
+    method: "POST",
+    body: JSON.stringify({
+      scheduled_time: scheduled_time ?? null,
+    }),
+  });
 };
 
 export const generateDraft = async (
-  brandId: string,
-  topic: string
-) => {
-  await delay(1000);
-
-  const newPost: Post = {
-    id: crypto.randomUUID(),
-    brandId,
-    masterBrief: {
-      topic,
-      goal: "Engagement",
-      targetAudience: "General audience",
-    },
-    platformDrafts: [
-      {
-        platform: "linkedin",
-        content: `AI-generated draft about ${topic}`,
-        hashtags: ["#AI", "#Automation"],
-        version: 1,
-        status: "awaiting_review",
-        aiGenerated: true,
-        updatedAt: new Date().toISOString(),
-      },
-    ],
-    overallStatus: "awaiting_review",
-    createdAt: new Date().toISOString(),
-  };
-
-  mockPosts.unshift(newPost);
-
-  return newPost;
+  payload: GenerateWorkflow1Payload
+): Promise<Post> => {
+  const response = await generateDraftPost(payload);
+  return response.post;
 };

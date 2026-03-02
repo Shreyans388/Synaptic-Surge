@@ -3,6 +3,7 @@ import cors from "cors";
 import authRoutes from "./routes/authRoutes.js";
 import oauthRoutes from "./routes/oauthRoutes.js";
 import brandRoutes from "./routes/brandRoutes.js";
+import postRoutes from "./routes/postRoutes.js";
 import devRoutes from "./routes/devRoutes.js";
 import cookieParser from "cookie-parser";
 
@@ -22,6 +23,7 @@ app.use(cookieParser());
 app.use("/api/auth", authRoutes);
 app.use("/api/oauth", oauthRoutes);
 app.use("/api/brands", brandRoutes);
+app.use("/api/posts", postRoutes);
 app.use("/", devRoutes);
 app.get("/health", (_req, res) => {
   res.status(200).json({ status: "Backend running" });
