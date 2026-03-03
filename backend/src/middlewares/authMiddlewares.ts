@@ -1,12 +1,14 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import type { JwtPayload } from "jsonwebtoken";
+import mongoose from "mongoose";
 
 import  {User } from "../models/userModel.js";
 import type {IUser} from "../models/userModel.js";
 
 interface CustomJwtPayload extends JwtPayload {
-  userId: string;
+  userId?: string;
+  sub?: string;
 }
 
 export const protectRoute = async (
@@ -37,14 +39,21 @@ export const protectRoute = async (
       process.env.JWT_SECRET as string
     ) as CustomJwtPayload;
 
-    if (!decoded?.userId) {
+    const tokenUserId = decoded?.userId ?? decoded?.sub;
+
+    if (!tokenUserId) {
       res.status(401).json({ message: "Unauthorized - Invalid token" });
       return;
     }
 
-   const user = await User.findById(decoded.userId)
-  .select("-password")
-  .lean<Omit<IUser, "password"> & { _id: string }>();
+    if (!mongoose.isValidObjectId(tokenUserId)) {
+      res.status(401).json({ message: "Unauthorized - Invalid token" });
+      return;
+    }
+
+    const user = await User.findById(tokenUserId)
+      .select("-password")
+      .lean<Omit<IUser, "password"> & { _id: string }>();
 
     if (!user) {
       res.status(404).json({ message: "User not found" });

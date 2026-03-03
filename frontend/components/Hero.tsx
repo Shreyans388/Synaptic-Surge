@@ -1,5 +1,6 @@
 // components/Hero.tsx
 import { Sparkles } from "lucide-react";
+import Link from "next/link";
 
 export default function Hero() {
   return (
@@ -22,9 +23,12 @@ export default function Hero() {
       </p>
 
       <div className="flex flex-col sm:flex-row justify-center gap-4">
-        <button className="rounded-xl bg-sky-600 px-8 py-4 font-bold text-white shadow-lg shadow-sky-500/20 transition-all hover:bg-sky-700">
+        <Link
+          href="/signup"
+          className="rounded-xl bg-sky-600 px-8 py-4 font-bold text-white shadow-lg shadow-sky-500/20 transition-all hover:bg-sky-700"
+        >
           Deploy Your Agent
-        </button>
+        </Link>
         <button className="px-8 py-4 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-gray-100 font-bold rounded-xl hover:bg-gray-50 dark:hover:bg-gray-900 transition-all">
           Watch Demo
         </button>

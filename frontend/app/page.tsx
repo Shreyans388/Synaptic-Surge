@@ -1,5 +1,6 @@
 // app/page.tsx
 import { Bot, Gauge, Radar, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 import Hero from "@/components/Hero";
 import AgentPreview from "@/components/AgentPreview";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -45,7 +46,21 @@ export default function LandingPage() {
           <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500" />
           LOOMIN
         </div>
-        <ThemeToggle />
+        <div className="flex items-center gap-3">
+          <Link
+            href="/login"
+            className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--border-strong)]"
+          >
+            Login
+          </Link>
+          <Link
+            href="/signup"
+            className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
+          >
+            Sign up
+          </Link>
+          <ThemeToggle />
+        </div>
       </nav>
 
       <Hero />
