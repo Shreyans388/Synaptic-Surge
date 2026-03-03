@@ -10,7 +10,7 @@ import cookieParser from "cookie-parser";
 const app = express();
 
 const corsOptions: cors.CorsOptions = {
-  origin: process.env.CLIENT_ORIGIN ?? "http://localhost:3001",
+  origin: process.env.CLIENT_ORIGIN ?? "http://localhost:3000",
   credentials: true,
 };
 

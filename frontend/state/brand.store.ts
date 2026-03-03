@@ -180,9 +180,7 @@ export const useBrandStore = create<BrandState>((set, get) => ({
     }
   },
 
-  //
-  // DISCONNECT PLATFORM
-  //
+  
   disconnectPlatform: async (brandId, provider) => {
     try {
       await axiosInstance.delete(`/brands/${brandId}/disconnect/${provider}`);
