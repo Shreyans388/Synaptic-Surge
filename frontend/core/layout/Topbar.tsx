@@ -1,9 +1,9 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { useGlobalStore } from "@/state/global.store";
 import { getBrands } from "@/services/api/brand.api";
+import { useGlobalStore } from "@/state/global.store";
+import { useQuery } from "@tanstack/react-query";
+import { usePathname } from "next/navigation";
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -39,22 +39,32 @@ export default function Topbar() {
 
         <div className="flex items-center gap-3">
           <div className="hidden items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] px-3 py-2 text-xs text-[var(--muted)] sm:flex">
-            <span>Brand</span>
-           <select
-  value={activeBrand?._id ?? ""}
-  onChange={(e) => {
-    const selected = brandsQuery.data?.find(
-      (brand) => brand._id === e.target.value
-    );
-    if (selected) {
-      setActiveBrand({
-        _id: selected._id,
-        name: selected.name,
-      });
-    }
-  }}
->
-              <option value="">{brandsQuery.isLoading ? "Loading..." : "None"}</option>
+            <select
+              value={activeBrand?._id ?? ""}
+              onChange={(e) => {
+                const selected = brandsQuery.data?.find(
+                  (brand) => brand._id === e.target.value,
+                );
+                if (selected) {
+                  setActiveBrand({
+                    _id: selected._id,
+                    name: selected.name,
+                  });
+                }
+              }}
+              className="
+    bg-[var(--surface-elevated)]
+    text-[var(--foreground)]
+    border border-[var(--border)]
+    rounded-lg
+    px-2 py-1
+    outline-none
+    focus:ring-1 focus:ring-[var(--accent)]
+  "
+            >
+              <option value="">
+                {brandsQuery.isLoading ? "Loading..." : "None"}
+              </option>
               {(brandsQuery.data ?? []).map((brand) => (
                 <option key={brand._id} value={brand._id}>
                   {brand.name}

@@ -76,3 +76,39 @@ body {
     radial-gradient(circle at 15% 15%, color-mix(in srgb, var(--accent) 10%, transparent) 0%, transparent 45%),
     radial-gradient(circle at 85% 0%, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 35%);
 }
+
+/* ========================= */
+/* POST ANALYTICS THEME LAYER */
+/* ========================= */
+
+.post-analytics {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.dark .post-analytics {
+  background: #0B0F1A;
+  color: #e2e8f0;
+}
+
+/* Card surfaces */
+.post-analytics .analytics-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+.dark .post-analytics .analytics-card {
+  background: #111625;
+  border: 1px solid #1e293b;
+}
+
+/* Soft elevated card */
+.post-analytics .analytics-card-soft {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.dark .post-analytics .analytics-card-soft {
+  background: #161B2A;
+  border: 1px solid #1e293b;
+}
