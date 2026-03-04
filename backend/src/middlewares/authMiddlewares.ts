@@ -1,7 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import type { JwtPayload } from "jsonwebtoken";
-import mongoose from "mongoose";
 
 import  {User } from "../models/userModel.js";
 import type {IUser} from "../models/userModel.js";
@@ -12,28 +11,10 @@ interface CustomJwtPayload extends JwtPayload {
 }
 
 const findUserFromTokenId = async (tokenUserId: string) => {
-  try {
-    const user = await User.findById(tokenUserId)
-      .select("-password")
-      .lean<Omit<IUser, "password"> & { _id: string }>();
-    if (user) return user;
-  } catch (error) {
-    if (!(error instanceof mongoose.Error.CastError)) {
-      throw error;
-    }
-  }
-
-  const rawUser = await User.collection.findOne({ _id: tokenUserId as unknown as mongoose.Types.ObjectId });
-  if (!rawUser) return null;
-
-  const { password: _password, ...rest } = rawUser as Record<string, unknown> & {
-    _id: unknown;
-  };
-
-  return {
-    ...rest,
-    _id: String(rest._id),
-  } as Omit<IUser, "password"> & { _id: string };
+  const user = await User.findById(tokenUserId)
+    .select("-password")
+    .lean<Omit<IUser, "password"> & { _id: string }>();
+  return user ?? null;
 };
 
 export const protectRoute = async (

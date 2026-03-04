@@ -1,11 +1,12 @@
-import { Schema, model, Types } from "mongoose";
+import { randomUUID } from "crypto";
+import { Schema, model } from "mongoose";
 
 export type PlatformType = "linkedin"| "facebook" | "instagram" | "twitter" | "reddit";
 
 export interface ISocialAccount {
-  _id: Types.ObjectId; // Let Mongo handle this
-  user: Types.ObjectId;
-  brand: Types.ObjectId;
+  _id: string;
+  user: string;
+  brand: string;
   platform: PlatformType;
   access_token: string;
   expires_at?: Date;
@@ -14,15 +15,19 @@ export interface ISocialAccount {
 
 const socialAccountSchema = new Schema<ISocialAccount>(
   {
+    _id: {
+      type: String,
+      default: () => randomUUID(),
+    },
     user: {
-      type: Schema.Types.ObjectId,
+      type: String,
       ref: "User",
       required: true,
       index: true,
     },
 
     brand: {
-      type: Schema.Types.ObjectId,
+      type: String,
       ref: "Brand",
       required: true,
       index: true,
@@ -57,5 +62,6 @@ socialAccountSchema.index(
 
 export const SocialAccount = model<ISocialAccount>(
   "SocialAccount",
-  socialAccountSchema
+  socialAccountSchema,
+  "social_accounts"
 );

@@ -1,10 +1,10 @@
-import mongoose, { Schema, model, Document } from "mongoose";
+import { Schema, model } from "mongoose";
 import { randomUUID } from "crypto";
 
 
 export interface IBrand {
   _id: string; 
-  userId: mongoose.Types.ObjectId; 
+  userId: string; 
   brand_name: string;
   brand_voice?: string;
   logo?: string;
@@ -18,9 +18,13 @@ export interface IBrand {
 
 const brandSchema = new Schema<IBrand>(
   {
+    _id: {
+      type: String,
+      default: () => randomUUID(),
+    },
   
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
       ref: "User",
       required: true,
       index: true,
