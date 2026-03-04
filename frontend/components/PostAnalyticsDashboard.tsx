@@ -70,7 +70,7 @@ const DarkDashboard = () => {
 
   return (
     <div className="post-analytics p-4 md:p-8 min-h-screen font-sans">
-      {/* HEADER SECTION */}
+     
       <header className="mb-10 max-w-6xl mx-auto">
         <div className="flex items-center gap-3 mb-4">
           <div className="px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-full text-[10px] font-bold uppercase tracking-widest">
@@ -93,7 +93,7 @@ const DarkDashboard = () => {
         </div>
       </header>
 
-      {/* KPI GRID */}
+
       <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <KpiCard
           title="Confidence"

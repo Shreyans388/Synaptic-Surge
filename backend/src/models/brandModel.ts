@@ -18,7 +18,6 @@ export interface IBrand {
 
 const brandSchema = new Schema<IBrand>(
   {
-    // 2. Added _id back with the UUID default
   
     userId: {
       type: mongoose.Schema.Types.ObjectId,

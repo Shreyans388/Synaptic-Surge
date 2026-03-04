@@ -2,14 +2,7 @@ import axiosInstance from "@/services/axios";
 import { create } from "zustand";
 
 
-//
-// Axios instance
-//
 
-
-//
-// Types
-//
 interface User {
   _id: string;
   fullName: string;
@@ -38,9 +31,8 @@ interface AuthState {
   checkAuth: () => Promise<void>;
 }
 
-//
-// Store
-//
+
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isSigningUp: false,
@@ -91,9 +83,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  //
-  // LOGOUT
-  //
+
+
   logout: async () => {
     try {
       await axiosInstance.post("/auth/logout");
@@ -106,9 +97,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  //
-  // CHECK AUTH (on app load)
-  //
+  
   checkAuth: async () => {
     try {
       const res = await axiosInstance.get("/auth/check");
