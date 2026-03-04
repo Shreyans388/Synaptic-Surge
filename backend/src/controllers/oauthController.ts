@@ -9,6 +9,12 @@ import {
   exchangeLinkedInCode,
   fetchLinkedInProfile,
 } from "../providers/linkedin.provider.js";
+import {
+  getInstagramAuthUrl,
+  exchangeInstagramCode,
+  exchangeInstagramLongLivedToken,
+  fetchInstagramUserId,
+} from "../providers/instagram.provider.js";
 import type { OauthStatePayload, SupportedProvider } from "../types/oauth.types.js";
 
 const FRONTEND_URL =
@@ -48,6 +54,11 @@ const redirectWithStatus = (
   res.redirect(`${FRONTEND_URL}/settings?${params.toString()}`);
 };
 
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  return String(error);
+};
+
 /* ================================
    STEP 1: INITIATE OAUTH
 ================================ */
@@ -77,13 +88,24 @@ export const oauthAuth = async (
     switch (provider) {
       case "linkedin":
         return res.redirect(getLinkedInAuthUrl(state));
+      case "instagram":
+        return res.redirect(getInstagramAuthUrl(state));
 
       default:
         return redirectWithStatus(provider, res, "not-configured");
     }
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ message: "OAuth init failed" });
+    const message = getErrorMessage(err);
+    console.error("OAuth init failed:", {
+      provider,
+      brandId,
+      error: message,
+    });
+    return res.status(500).json({
+      message: "OAuth init failed",
+      provider,
+      error: message,
+    });
   }
 };
 
@@ -153,12 +175,59 @@ export const oauthCallback = async (
 
         return redirectWithStatus(provider, res, "connected");
       }
+      case "instagram": {
+
+  const { access_token: shortToken } =
+    await exchangeInstagramCode(code);
+
+  let finalToken = shortToken;
+  let expiresAt: Date | undefined;
+
+  try {
+    const longToken =
+      await exchangeInstagramLongLivedToken(shortToken);
+
+    if (longToken?.access_token) {
+      finalToken = longToken.access_token;
+    }
+
+    if (longToken?.expires_in) {
+      expiresAt = new Date(Date.now() + longToken.expires_in * 1000);
+    }
+  } catch (err) {
+    console.warn("Long token exchange failed", err);
+  }
+
+  const instagramUserId =
+    await fetchInstagramUserId(finalToken);
+
+  await SocialAccount.findOneAndUpdate(
+    {
+      user: userId,
+      brand: brandId,
+      platform: provider,
+    },
+    {
+      access_token: finalToken,
+      ...(expiresAt ? { expires_at: expiresAt } : {}),
+      meta: {
+        instagram_user_id: instagramUserId,
+      },
+    },
+    { upsert: true, new: true }
+  );
+
+  return redirectWithStatus(provider, res, "connected");
+}
 
       default:
         return redirectWithStatus(provider, res, "not-configured");
     }
   } catch (err) {
-    console.error(err);
+    console.error("OAuth callback failed:", {
+      provider,
+      error: getErrorMessage(err),
+    });
     return redirectWithStatus(
       isSupportedProvider(provider) ? provider : "linkedin",
       res,

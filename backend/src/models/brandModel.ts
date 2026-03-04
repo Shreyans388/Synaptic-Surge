@@ -41,7 +41,6 @@ const brandSchema = new Schema<IBrand>(
   { timestamps: true }
 );
 
-// Brand names are unique per user, not globally.
 brandSchema.index({ userId: 1, brand_name: 1 }, { unique: true });
 
 export const Brand = model<IBrand>("Brand", brandSchema);

@@ -12,8 +12,8 @@ import { useAuthStore } from "@/state/auth.store";
 
 // API Services
 import { logoutUser } from "@/services/api/auth.api";
-import axiosInstance from "@/services/axios"; // Adjust path if your axios instance is located elsewhere
 import {
+  buildOauthConnectUrl,
   createBrand,
   disconnectPlatform,
   getBrandConnections,
@@ -155,18 +155,12 @@ export default function SettingsPage() {
 
  // OAuth Connect Handler
   const handleOAuthConnect = async (providerKey: string) => {
-    if (!user?._id) return alert("Please log in first.");
     if (!activeBrand?._id) return alert("Please select a brand first.");
 
     try {
       setConnectingProvider(providerKey);
-      // Fetch the auth URL from your backend
-      const res = await axiosInstance.get(`/auth/${providerKey}/url?userId=${user._id}&brandId=${activeBrand._id}`);
-      
-      if (res.data.url) {
-        // FIX: Use .assign() instead of mutating .href directly
-        window.location.assign(res.data.url); 
-      }
+      const url = buildOauthConnectUrl(providerKey as SocialProvider, activeBrand._id);
+      window.location.assign(url);
     } catch (error) {
       console.error(`Failed to connect to ${providerKey}:`, error);
       alert(`Could not initiate ${providerKey} connection.`);
