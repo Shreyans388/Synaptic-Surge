@@ -5,21 +5,10 @@ export interface IPost {
   batch_id: string;
   user_id: string;
   brandId: string;
-  topic?: string;
-  tone?: string;
-  post_details?: string;
-  context?: string;
-  image_preference?: string;
-  image_prompt?: string;
-  reference_image_url?: string;
-
-  content: string;
+  content: Record<string, unknown> | string;
   image_url?: string;
-  title_default?: string;
-  title_reddit?: string;
-  tags?: string[];
-  platforms?: string[];
-  scheduled_time?: Date | null;
+  results?: Array<Record<string, unknown>>;
+  old_id?: string;
 
   platform_posts: {
     linkedin?: string;
@@ -27,9 +16,6 @@ export interface IPost {
     reddit?: string;
     twitter?: string;
   };
-
-  workflow1_output?: Record<string, unknown>;
-  workflow2_output?: Record<string, unknown>;
   review_status?: "draft" | "awaiting_review" | "published" | "rejected";
   published_at?: Date;
 
@@ -42,6 +28,8 @@ export interface IPost {
 
   status: "active" | "paused" | "deleted";
   version: number;
+  analytics?: Record<string, unknown>;
+  ai_response?: Record<string, unknown>;
 
   created_at: Date;
   updated_at: Date;
@@ -70,68 +58,22 @@ const postSchema = new Schema<IPost>(
       required: true,
       index: true,
     },
-    topic: {
-      type: String,
-    },
-    tone: {
-      type: String,
-    },
-    post_details: {
-      type: String,
-    },
-    context: {
-      type: String,
-    },
-    image_preference: {
-      type: String,
-    },
-    image_prompt: {
-      type: String,
-    },
-    reference_image_url: {
-      type: String,
-    },
-
     content: {
-      type: String,
+      type: Schema.Types.Mixed,
       required: true,
     },
 
     image_url: {
       type: String,
     },
-    title_default: {
-      type: String,
-    },
-    title_reddit: {
-      type: String,
-    },
-    tags: [
-      {
-        type: String,
-      },
-    ],
-    platforms: [
-      {
-        type: String,
-      },
-    ],
-    scheduled_time: {
-      type: Date,
-      default: null,
-    },
+    results: [{ type: Schema.Types.Mixed }],
+    old_id: { type: String },
 
     platform_posts: {
       linkedin: { type: String },
       instagram: { type: String },
       reddit: { type: String },
       twitter: { type: String },
-    },
-    workflow1_output: {
-      type: Schema.Types.Mixed,
-    },
-    workflow2_output: {
-      type: Schema.Types.Mixed,
     },
     review_status: {
       type: String,
@@ -169,6 +111,8 @@ const postSchema = new Schema<IPost>(
       type: Number,
       default: 1,
     },
+    analytics: { type: Schema.Types.Mixed },
+    ai_response: { type: Schema.Types.Mixed },
   },
   {
     timestamps: {

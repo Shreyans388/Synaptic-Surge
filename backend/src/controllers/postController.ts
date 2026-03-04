@@ -41,6 +41,21 @@ interface Workflow1Output {
   scheduled_time?: string | null;
 }
 
+interface Workflow2Output {
+  user_id?: string | number;
+  batch_id?: string;
+  image_url?: string;
+  content?: Record<string, unknown>;
+  results?: Array<Record<string, unknown>>;
+  platform_posts?: Partial<Record<Platform, string | null>>;
+  status?: "active" | "paused" | "deleted";
+  version?: number;
+  tracking?: Record<string, unknown>;
+  analytics?: Record<string, unknown>;
+  old_id?: string;
+  ai_response?: Record<string, unknown>;
+}
+
 interface Workflow1Input {
   userId: string;
   userEmail: string;
@@ -113,13 +128,9 @@ const extractWorkflow1FromBody = (body: PublishBody | undefined): Workflow1Outpu
 };
 
 const mapPostToFrontend = (post: {
-  _id: string;
+  _id: string | { toString(): string };
   brandId: string;
-  topic?: string;
-  tone?: string;
-  context?: string;
-  content: string;
-  tags?: string[];
+  content: Record<string, unknown> | string;
   platform_posts?: Partial<Record<Platform, string>>;
   review_status?: ReviewStatus;
   created_at: Date;
@@ -128,26 +139,34 @@ const mapPostToFrontend = (post: {
   analytics?: Record<string, unknown>;
 }) => {
   const reviewStatus = toReviewStatus(post.review_status);
+  const postId = typeof post._id === "string" ? post._id : post._id.toString();
   const drafts = Object.entries(post.platform_posts ?? {})
     .filter(([platform]) => platform === "linkedin" || platform === "instagram" || platform === "reddit")
     .filter(([, text]) => typeof text === "string" && text.trim().length > 0)
     .map(([platform, text]) => ({
       platform: platform as "linkedin" | "instagram" | "reddit",
       content: text as string,
-      hashtags: post.tags ?? [],
+      hashtags: [],
       version: 1,
       status: reviewStatus,
       aiGenerated: true,
       updatedAt: post.created_at.toISOString(),
     }));
 
+  const fallbackContent = (() => {
+    if (typeof post.content === "string") return post.content;
+    if (!post.content || typeof post.content !== "object") return "Untitled";
+    const values = Object.values(post.content).filter((v): v is string => typeof v === "string");
+    return values[0] ?? "Untitled";
+  })();
+
   return {
-    id: post._id,
+    id: postId,
     brandId: post.brandId,
     masterBrief: {
-      topic: post.topic ?? (post.content.slice(0, 80) || "Untitled"),
+      topic: fallbackContent.slice(0, 80) || "Untitled",
       goal: "Engagement",
-      targetAudience: post.tone ?? post.context ?? "General audience",
+      targetAudience: "General audience",
     },
     platformDrafts:
       drafts.length > 0
@@ -155,8 +174,8 @@ const mapPostToFrontend = (post: {
         : [
             {
               platform: "linkedin" as const,
-              content: post.content,
-              hashtags: post.tags ?? [],
+              content: fallbackContent,
+              hashtags: [],
               version: 1,
               status: reviewStatus,
               aiGenerated: true,
@@ -276,39 +295,23 @@ export const generatePostDraft = async (
     const createPayload: Record<string, unknown> = {
       _id: randomUUID(),
       batch_id: randomUUID(),
-      user_id: workflow1Data.user_id ?? workflow1Payload.userId,
+      user_id: authUserId,
       brandId: brand._id,
-      topic: workflow1Payload.topic,
-      tone: workflow1Payload.tone,
-      content:
-        safeText(workflow1Data.title?.default) ??
-        safeText(workflow1Data.content.linkedin) ??
-        safeText(workflow1Data.content.instagram) ??
-        safeText(workflow1Data.content.reddit) ??
-        "",
+      content: workflow1Data.content ?? {},
       image_url: safeText(workflow1Data.image_url),
       platform_posts: buildPlatformPosts(workflow1Data.content),
-      title_default: safeText(workflow1Data.title?.default),
-      title_reddit: safeText(workflow1Data.title?.reddit),
-      tags,
-      platforms,
-      scheduled_time: workflow1Data.scheduled_time ? new Date(workflow1Data.scheduled_time) : null,
-      workflow1_output: workflow1Data as Record<string, unknown>,
+      results: [],
+      old_id: `post_${Date.now()}`,
       review_status: "draft",
       tracking: {
-        enabled: false,
+        enabled: true,
         interval_hours: 48,
       },
       status: "active",
       version: 1,
     };
-    if (workflow1Payload.post_details) createPayload.post_details = workflow1Payload.post_details;
-    if (workflow1Payload.context) createPayload.context = workflow1Payload.context;
-    if (workflow1Payload.image_preference) createPayload.image_preference = workflow1Payload.image_preference;
-    if (workflow1Payload.image_prompt) createPayload.image_prompt = workflow1Payload.image_prompt;
-    if (workflow1Payload.reference_image_url) createPayload.reference_image_url = workflow1Payload.reference_image_url;
 
-    const postDoc = (await Post.create(createPayload)) as { _id: string };
+    const postDoc = (await Post.create(createPayload)) as { _id: string | { toString(): string } };
     const createdPost = await Post.findById(postDoc._id).lean();
     if (!createdPost) {
       res.status(500).json({ message: "Draft saved but could not be loaded" });
@@ -376,7 +379,7 @@ export const publishDraftPost = async (
       return;
     }
 
-    const workflow1Raw = workflow1FromBody ?? post?.workflow1_output;
+    const workflow1Raw = workflow1FromBody ?? ({ content: post?.content } as Workflow1Output);
     const workflow1Data = (workflow1Raw ?? {}) as Workflow1Output;
     if (!workflow1Data.content) {
       res.status(400).json({
@@ -397,7 +400,7 @@ export const publishDraftPost = async (
     };
 
     const workflow2Res = await axios.post(workflow2Url, publishPayload, { timeout: 120000 });
-    const workflow2Data = normalizeWebhookData<unknown>(workflow2Res.data);
+    const workflow2Data = normalizeWebhookData<Workflow2Output>(workflow2Res.data);
 
     if (!post) {
       res.status(200).json({
@@ -411,11 +414,21 @@ export const publishDraftPost = async (
       { _id: postId, user_id: req.user!._id.toString() },
       {
         $set: {
-          scheduled_time: requestedSchedule,
-          workflow2_output:
-            workflow2Data && typeof workflow2Data === "object"
-              ? (workflow2Data as Record<string, unknown>)
-              : { result: workflow2Data },
+          ...(workflow2Data?.batch_id ? { batch_id: workflow2Data.batch_id } : {}),
+          ...(workflow2Data?.image_url ? { image_url: workflow2Data.image_url } : {}),
+          ...(workflow2Data?.content ? { content: workflow2Data.content } : {}),
+          ...(Array.isArray(workflow2Data?.results) ? { results: workflow2Data.results } : {}),
+          ...(workflow2Data?.platform_posts
+            ? { platform_posts: workflow2Data.platform_posts }
+            : {}),
+          ...(workflow2Data?.status ? { status: workflow2Data.status } : {}),
+          ...(typeof workflow2Data?.version === "number"
+            ? { version: workflow2Data.version }
+            : {}),
+          ...(workflow2Data?.tracking ? { tracking: workflow2Data.tracking } : {}),
+          ...(workflow2Data?.analytics ? { analytics: workflow2Data.analytics } : {}),
+          ...(workflow2Data?.old_id ? { old_id: workflow2Data.old_id } : {}),
+          ...(workflow2Data?.ai_response ? { ai_response: workflow2Data.ai_response } : {}),
           review_status: "published",
           published_at: now,
         },
