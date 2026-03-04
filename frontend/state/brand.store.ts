@@ -100,8 +100,18 @@ export const useBrandStore = create<BrandState>((set, get) => ({
         set({ activeBrand: res.data[0] });
       }
     } catch (err) {
+      if (isAxiosError(err) && err.response?.status === 401) {
+        set({
+          brands: [],
+          activeBrand: null,
+          isLoadingBrands: false,
+        });
+        return;
+      }
+
       set({ isLoadingBrands: false });
-      throw err;
+      const message = isAxiosError(err) ? err.response?.data?.message : "Failed to fetch brands";
+      throw new Error(message);
     }
   },
 

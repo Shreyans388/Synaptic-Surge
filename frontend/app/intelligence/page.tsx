@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useGlobalStore } from "@/state/global.store";
 import { getPosts } from "@/services/api/posts.api";
 import { syncAnalyticsNotifications } from "@/services/api/notifications.api";
+import PostAnalyticsDashboard from "@/components/PostAnalyticsDashboard";
 
 export default function IntelligencePage() {
   const activeBrand = useGlobalStore((s) => s.activeBrand);
@@ -52,10 +53,12 @@ export default function IntelligencePage() {
           }
         />
         <InsightCard
-          title="Optimization Signals"
-          value="3 Active"
+          title="AI-Analyzed Posts"
+          value={posts.filter((p) => !!p.aiResponse).length}
         />
       </div>
+
+      <PostAnalyticsDashboard posts={posts} />
     </div>
   );
 }
@@ -68,8 +71,8 @@ function InsightCard({
   value: string | number;
 }) {
   return (
-    <div className="p-4 border rounded-xl bg-white dark:bg-gray-900">
-      <p className="text-sm text-gray-500">{title}</p>
+    <div className="p-4 border rounded-xl bg-[var(--surface)]">
+      <p className="text-sm text-[var(--muted)]">{title}</p>
       <h2 className="text-xl font-semibold">{value}</h2>
     </div>
   );

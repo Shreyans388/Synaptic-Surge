@@ -1,18 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getPosts, approvePost } from "@/services/api/posts.api";
+import { useQuery } from "@tanstack/react-query";
+import { getPosts } from "@/services/api/posts.api";
 import { useBrandStore } from "@/state/brand.store";
 import { Post } from "@/types/domain.type";
-import { StatusBadge } from "@/modules/dashboard/StatusBadge";
 import {
   Rocket,
   CheckCircle,
-  Clock,
-  Sparkles,
   LayoutGrid,
-  List,
   Plus,
 } from "lucide-react";
 import PostAnalyticsDashboard from "@/components/PostAnalyticsDashboard";
@@ -28,8 +24,6 @@ export default function DashboardPage() {
     setActiveBrand,
   } = useBrandStore();
 
-  const queryClient = useQueryClient();
-
   const [showCreateBrand, setShowCreateBrand] = useState(false);
   const [brandName, setBrandName] = useState("");
   const [brandDescription, setBrandDescription] = useState("");
@@ -42,15 +36,6 @@ export default function DashboardPage() {
     queryKey: ["posts", activeBrand?._id],
     queryFn: () => getPosts(activeBrand?._id as string),
     enabled: !!activeBrand?._id,
-  });
-
-  const approveMutation = useMutation({
-    mutationFn: approvePost,
-    onSettled: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["posts", activeBrand?._id],
-      });
-    },
   });
 
   const handleCreateBrand = async (e: React.FormEvent) => {
@@ -115,7 +100,7 @@ export default function DashboardPage() {
       {/* POSTS SECTION */}
       {activeBrand && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <MetricCard
               title="Total Fleet"
               value={posts.length}
@@ -128,15 +113,9 @@ export default function DashboardPage() {
               icon={CheckCircle}
               color="text-green-500"
             />
-            <MetricCard
-              title="In Review"
-              value={posts.filter(p => p.overallStatus === "awaiting_review").length}
-              icon={Clock}
-              color="text-sky-500"
-            />
           </div>
 
-          <PostAnalyticsDashboard />
+          <PostAnalyticsDashboard posts={posts} />
         </>
       )}
     </div>

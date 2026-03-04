@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Synaptic Surge",
+  title: "LOOMIN",
   description: "AI-native SaaS workspace for content operations",
 };
 

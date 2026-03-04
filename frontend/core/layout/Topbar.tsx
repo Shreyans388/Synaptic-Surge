@@ -8,7 +8,6 @@ import { usePathname } from "next/navigation";
 const TITLES: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/studio": "Content Studio",
-  "/review": "Review Queue",
   "/intelligence": "Intelligence Center",
   "/notifications": "Notifications",
   "/settings": "Settings",
@@ -16,8 +15,6 @@ const TITLES: Record<string, string> = {
 
 export default function Topbar() {
   const pathname = usePathname();
-  const theme = useGlobalStore((state) => state.theme);
-  const setTheme = useGlobalStore((state) => state.setTheme);
   const activeBrand = useGlobalStore((state) => state.activeBrand);
   const setActiveBrand = useGlobalStore((state) => state.setActiveBrand);
 
@@ -34,7 +31,7 @@ export default function Topbar() {
             Workspace
           </p>
           <h2 className="text-lg font-semibold">
-            {TITLES[pathname] ?? "Synaptic Surge"}
+            {TITLES[pathname] ?? "LOOMIN"}
           </h2>
         </div>
 
@@ -74,12 +71,6 @@ export default function Topbar() {
             </select>
           </div>
 
-          <button
-            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-            className="focus-ring rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] px-3 py-2 text-sm font-medium hover:border-[var(--border-strong)]"
-          >
-            {theme === "light" ? "Dark" : "Light"} mode
-          </button>
         </div>
       </div>
     </header>

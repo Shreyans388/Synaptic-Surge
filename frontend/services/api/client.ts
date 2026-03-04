@@ -15,6 +15,13 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
   });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+        window.location.assign("/login");
+      }
+      throw new Error("Session expired. Please log in again.");
+    }
+
     let message = "Request failed";
     try {
       const data = (await res.json()) as ApiErrorPayload;

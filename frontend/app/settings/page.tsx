@@ -41,8 +41,6 @@ export default function SettingsPage() {
   const searchParams = useSearchParams();
 
   // Global Store
-  const theme = useGlobalStore((s) => s.theme);
-  const setTheme = useGlobalStore((s) => s.setTheme);
   const activeBrand = useGlobalStore((s) => s.activeBrand);
   const setActiveBrand = useGlobalStore((s) => s.setActiveBrand);
 
@@ -53,6 +51,7 @@ export default function SettingsPage() {
   const [newBrandName, setNewBrandName] = useState("");
   const [isAddBrandOpen, setIsAddBrandOpen] = useState(false);
   const [isBrandProfileOpen, setIsBrandProfileOpen] = useState(true);
+  const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
 
   const oauthStatus = searchParams.get("status") || searchParams.get("linkedin_connected");
@@ -106,14 +105,15 @@ export default function SettingsPage() {
 
   const saveProfileMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      if (!activeBrand) throw new Error("No active brand selected");
+      const brandId = activeBrand?._id ?? selectedBrandRecord?._id;
+      if (!brandId) throw new Error("No active brand selected");
 
       const brandColors = String(formData.get("brandColors") ?? "")
         .split(",")
         .map((item) => item.trim())
         .filter(Boolean);
 
-      return updateBrand(activeBrand._id, {
+      return updateBrand(brandId, {
         brandColors,
         brandStyle: String(formData.get("brandStyle") ?? "").trim() || undefined,
         brandText: String(formData.get("brandText") ?? "").trim() || undefined,
@@ -126,9 +126,13 @@ export default function SettingsPage() {
       });
     },
     onSuccess: () => {
+      setProfileSaveError(null);
       queryClient.invalidateQueries({ queryKey: ["brands"] });
       setIsBrandProfileOpen(false);
       alert("Profile saved successfully!");
+    },
+    onError: (error: Error) => {
+      setProfileSaveError(error.message || "Failed to save brand profile");
     },
   });
 
@@ -173,16 +177,6 @@ export default function SettingsPage() {
   return (
     <div className="max-w-4xl space-y-8 p-6">
       <h1 className="text-2xl font-semibold">Settings</h1>
-
-      <section className="space-y-3 rounded-2xl border border-(--border) bg-(--surface) p-5">
-        <h2 className="text-lg font-semibold">Theme</h2>
-        <button
-          onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-          className="focus-ring rounded-xl border border-(--border) bg-(--surface-elevated) px-4 py-2 text-sm font-medium hover:border-(--border-strong)"
-        >
-          Switch to {theme === "light" ? "dark" : "light"} mode
-        </button>
-      </section>
 
       <section className="space-y-4 rounded-2xl border border-(--border) bg-(--surface) p-5">
         <div>
@@ -278,6 +272,7 @@ export default function SettingsPage() {
             className="space-y-3"
             onSubmit={(e) => {
               e.preventDefault();
+              setProfileSaveError(null);
               saveProfileMutation.mutate(new FormData(e.currentTarget));
             }}
           >
@@ -332,6 +327,10 @@ export default function SettingsPage() {
               rows={4}
               className="w-full rounded-xl border border-(--border) bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
             />
+
+            {profileSaveError ? (
+              <p className="text-sm text-red-400">{profileSaveError}</p>
+            ) : null}
 
             <button
               type="submit"

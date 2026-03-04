@@ -15,7 +15,6 @@ const FRONTEND_URL =
   process.env.FRONTEND_URL ??
   process.env.CLIENT_ORIGIN ??
   "http://localhost:3000";
-
 const isSupportedProvider = (
   provider: string
 ): provider is SupportedProvider => {

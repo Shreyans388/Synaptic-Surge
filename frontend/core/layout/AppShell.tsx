@@ -26,8 +26,9 @@ export default function AppShell({
     !!pathname && PUBLIC_ROUTES.has(pathname);
 
   useEffect(() => {
+    if (isPublicRoute) return;
     checkAuth();
-  }, [checkAuth]);
+  }, [checkAuth, isPublicRoute]);
 
   useEffect(() => {
     if (isCheckingAuth) return;

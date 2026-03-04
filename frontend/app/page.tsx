@@ -3,7 +3,6 @@ import { Bot, Gauge, Radar, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import Hero from "@/components/Hero";
 import AgentPreview from "@/components/AgentPreview";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 const features = [
   {
@@ -59,7 +58,6 @@ export default function LandingPage() {
           >
             Sign up
           </Link>
-          <ThemeToggle />
         </div>
       </nav>
 

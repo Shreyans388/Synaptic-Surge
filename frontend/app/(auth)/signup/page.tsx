@@ -28,42 +28,36 @@ export default function SignUp() {
         email,
         password,
       });
-     router.push("/dashboard");
+      router.push("/dashboard");
     } catch (err: any) {
       setError(err.message);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row bg-white dark:bg-[#030712]">
-
-      {/* LEFT PANEL — unchanged */}
-      <div className="hidden md:flex md:w-1/3 flex-col justify-between border-r border-gray-200 bg-gray-50 p-12 dark:border-gray-800 dark:bg-[#0B0E14]">
+    <div className="min-h-screen flex flex-col md:flex-row bg-black text-white">
+      <div className="hidden md:flex md:w-1/3 flex-col justify-between border-r border-zinc-800 bg-zinc-950 p-12">
         <div>
-          <div className="flex items-center gap-2 text-2xl font-black tracking-tighter dark:text-white">
+          <div className="flex items-center gap-2 text-2xl font-black tracking-tighter">
             <div className="h-8 w-8 rounded-lg bg-sky-600" /> LOOMIN
           </div>
-          <h2 className="mt-20 text-3xl font-bold leading-tight dark:text-white">
+          <h2 className="mt-20 text-3xl font-bold leading-tight">
             Your AI workforce is <br /> ready to deploy.
           </h2>
-          <p className="mt-4 text-gray-500 dark:text-gray-400">
-            Join 10,000+ creators who have automated their social presence.
+          <p className="mt-4 text-zinc-400">
+            Join teams automating social operations with AI.
           </p>
         </div>
       </div>
 
-      {/* RIGHT PANEL */}
       <div className="flex-1 overflow-y-auto p-8 md:p-20">
         <div className="mx-auto max-w-xl">
-          <h1 className="mb-2 text-3xl font-bold dark:text-white">
-            Create your account
-          </h1>
-          
+          <h1 className="mb-2 text-3xl font-bold">Create your account</h1>
 
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
             <AgentPersonaCard
               title="Growth Agent"
-              description="Optimized for reach & virality."
+              description="Optimized for reach and virality."
               icon={Rocket}
               selected={selectedPersona === "growth"}
               onClick={() => setSelectedPersona("growth")}
@@ -84,7 +78,7 @@ export default function SignUp() {
                 placeholder="First Name"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 p-4 dark:border-gray-800"
+                className="w-full rounded-xl border border-zinc-800 bg-black p-4 text-white placeholder:text-zinc-500"
                 required
               />
               <input
@@ -92,7 +86,7 @@ export default function SignUp() {
                 placeholder="Last Name"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                className="w-full rounded-xl border border-gray-200 p-4 dark:border-gray-800"
+                className="w-full rounded-xl border border-zinc-800 bg-black p-4 text-white placeholder:text-zinc-500"
                 required
               />
             </div>
@@ -102,7 +96,7 @@ export default function SignUp() {
               placeholder="Work Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 p-4 dark:border-gray-800"
+              className="w-full rounded-xl border border-zinc-800 bg-black p-4 text-white placeholder:text-zinc-500"
               required
             />
 
@@ -111,27 +105,25 @@ export default function SignUp() {
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 p-4 dark:border-gray-800"
+              className="w-full rounded-xl border border-zinc-800 bg-black p-4 text-white placeholder:text-zinc-500"
               minLength={6}
               required
             />
 
-            {error && (
-              <p className="text-sm text-red-500">{error}</p>
-            )}
+            {error && <p className="text-sm text-red-400">{error}</p>}
 
             <button
               type="submit"
               disabled={isSigningUp}
-              className="w-full rounded-xl bg-sky-600 py-4 font-bold text-white shadow-lg shadow-sky-500/20 transition hover:bg-sky-700 disabled:opacity-70"
+              className="w-full rounded-xl bg-sky-600 py-4 font-bold text-white transition hover:bg-sky-700 disabled:opacity-70"
             >
-              {isSigningUp ? "Creating account..." : "Continue →"}
+              {isSigningUp ? "Creating account..." : "Continue ->"}
             </button>
           </form>
 
-          <p className="mt-8 text-center text-sm text-gray-500">
+          <p className="mt-8 text-center text-sm text-zinc-400">
             Already have an account?{" "}
-            <Link href="/login" className="font-bold text-sky-600 hover:underline">
+            <Link href="/login" className="font-bold text-sky-400 hover:text-sky-300">
               Log in
             </Link>
           </p>

@@ -124,6 +124,8 @@ const mapPostToFrontend = (post: {
   review_status?: ReviewStatus;
   created_at: Date;
   published_at?: Date;
+  ai_response?: Record<string, unknown>;
+  analytics?: Record<string, unknown>;
 }) => {
   const reviewStatus = toReviewStatus(post.review_status);
   const drafts = Object.entries(post.platform_posts ?? {})
@@ -163,6 +165,8 @@ const mapPostToFrontend = (post: {
           ],
     overallStatus: reviewStatus,
     createdAt: post.created_at.toISOString(),
+    aiResponse: post.ai_response,
+    analytics: post.analytics,
     ...(post.published_at ? { publishedAt: post.published_at.toISOString() } : {}),
   };
 };

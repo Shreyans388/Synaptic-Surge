@@ -28,6 +28,8 @@ export interface Post {
   overallStatus: PostStatus;
   createdAt: string;
   publishedAt?: string;
+  aiResponse?: Record<string, unknown>;
+  analytics?: Record<string, unknown>;
 }
 
 export interface Brand {
