@@ -10,6 +10,7 @@ const TITLES: Record<string, string> = {
   "/studio": "Content Studio",
   "/review": "Review Queue",
   "/intelligence": "Intelligence Center",
+  "/notifications": "Notifications",
   "/settings": "Settings",
 };
 

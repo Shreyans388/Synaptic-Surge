@@ -21,8 +21,21 @@ interface CreateAndPublishResponse {
 }
 
 interface PublishPostResponse {
-  post: Post;
+  post?: Post;
   workflow2: unknown;
+}
+
+export interface Workflow1OutputPayload {
+  user_id?: string;
+  image_url?: string;
+  content?: Partial<Record<"linkedin" | "instagram" | "reddit", string>>;
+  title?: {
+    default?: string;
+    reddit?: string;
+  };
+  tags?: string[];
+  platforms?: Array<"linkedin" | "instagram" | "reddit">;
+  scheduled_time?: string | null;
 }
 
 export const getPosts = async (brandId: string): Promise<Post[]> => {
@@ -49,12 +62,14 @@ export const generateDraftPost = async (
 
 export const publishDraftPost = async (
   postId: string,
-  scheduled_time?: string | null
+  scheduled_time?: string | null,
+  workflow1_output?: Workflow1OutputPayload
 ): Promise<PublishPostResponse> => {
   return apiRequest<PublishPostResponse>(`/api/posts/${postId}/publish`, {
     method: "POST",
     body: JSON.stringify({
       scheduled_time: scheduled_time ?? null,
+      ...(workflow1_output ? { workflow1_output } : {}),
     }),
   });
 };

@@ -12,7 +12,7 @@ interface OauthStatePayload {
   provider: SupportedProvider;
 }
 
-const FRONTEND_URL = process.env.FRONTEND_URL ?? process.env.CLIENT_ORIGIN ?? "http://localhost:3000";
+const FRONTEND_URL = process.env.FRONTEND_URL ?? process.env.CLIENT_ORIGIN ?? "http://localhost:3001";
 
 const isSupportedProvider = (provider: string): provider is SupportedProvider => {
   return provider === "linkedin" || provider === "instagram" || provider === "twitter";

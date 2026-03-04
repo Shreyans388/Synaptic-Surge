@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, Plus, Send, X } from "lucide-react";
 import { useGlobalStore } from "@/state/global.store";
+import { useAuthStore } from "@/state/auth.store";
 import { generateDraftPost, getPosts, publishDraftPost } from "@/services/api/posts.api";
 import { Post } from "@/types/domain.type";
 
@@ -29,7 +30,7 @@ const initialState: FormState = {
 
 export default function StudioPage() {
   const queryClient = useQueryClient();
-  const user = useGlobalStore((s) => s.user);
+  const user = useAuthStore((s) => s.user);
   const activeBrand = useGlobalStore((s) => s.activeBrand);
 
   const [open, setOpen] = useState(false);
@@ -37,9 +38,9 @@ export default function StudioPage() {
   const [scheduleByPost, setScheduleByPost] = useState<Record<string, string>>({});
 
   const { data: posts = [] } = useQuery<Post[]>({
-    queryKey: ["posts", activeBrand],
-    queryFn: () => getPosts(activeBrand?.id as string),
-    enabled: !!activeBrand,
+    queryKey: ["posts", activeBrand?._id],
+    queryFn: () => getPosts(activeBrand?._id as string),
+    enabled: !!activeBrand?._id,
   });
 
   const draftPosts = useMemo(
@@ -60,7 +61,7 @@ export default function StudioPage() {
       }
 
       return generateDraftPost({
-        userId: user?.id ?? "123",
+        userId: user?._id ?? "123",
         userEmail: user?.email ?? "",
         brand_name: activeBrand.name,
         topic: form.topic.trim(),

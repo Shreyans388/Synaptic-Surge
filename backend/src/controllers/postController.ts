@@ -3,6 +3,7 @@ import axios from "axios";
 import { randomUUID } from "crypto";
 import { Post } from "../models/postModel.js";
 import { Brand } from "../models/brandModel.js";
+import { createNotification } from "../services/notificationService.js";
 
 type ReviewStatus = "draft" | "awaiting_review" | "published" | "rejected";
 type Platform = "linkedin" | "instagram" | "reddit" ;
@@ -23,6 +24,8 @@ interface GenerateBody {
 
 interface PublishBody {
   scheduled_time?: string | null;
+  workflow1_output?: Workflow1Output;
+  workflow1?: Workflow1Output;
 }
 
 interface Workflow1Output {
@@ -41,21 +44,14 @@ interface Workflow1Output {
 interface Workflow1Input {
   userId: string;
   userEmail: string;
-  brand_name?: string | undefined;
-  brand_colors?: string[] | undefined;
-  brand_style?: string | undefined;
-  brand_text?: string | undefined;
-  brand_voice?: string | undefined;
-  cta_style?: string | undefined;
-  logo_url?: string | undefined;
-  logo_position?: string | undefined;
-  topic?: string | undefined;
-  tone?: string | undefined;
-  post_details?: string | undefined;
-  context?: string | undefined;
-  image_preference?: string | undefined;
-  image_prompt?: string | undefined;
-  reference_image_url?: string | undefined;
+  brand_name: string;
+  topic: string;
+  tone: string;
+  post_details: string;
+  context: string;
+  image_preference: string;
+  image_prompt: string;
+  reference_image_url: string;
 }
 
 const normalizeWebhookData = <T>(data: unknown): T => {
@@ -95,6 +91,25 @@ const buildPlatformPosts = (content: Partial<Record<Platform, string>> | undefin
   if (instagram) result.instagram = instagram;
   if (reddit) result.reddit = reddit;
   return result;
+};
+
+const extractWorkflow1FromBody = (body: PublishBody | undefined): Workflow1Output | undefined => {
+  if (!body || typeof body !== "object") return undefined;
+
+  if (body.workflow1_output && typeof body.workflow1_output === "object") {
+    return body.workflow1_output;
+  }
+
+  if (body.workflow1 && typeof body.workflow1 === "object") {
+    return body.workflow1;
+  }
+
+
+  if ("content" in body && typeof (body as { content?: unknown }).content === "object") {
+    return body as Workflow1Output;
+  }
+
+  return undefined;
 };
 
 const mapPostToFrontend = (post: {
@@ -212,29 +227,32 @@ export const generatePostDraft = async (
       res.status(404).json({ message: "Brand not found" });
       return;
     }
-
+    
     const workflow1Payload: Workflow1Input = {
       userId: safeText(req.body.userId) ?? authUserId,
       userEmail: safeText(req.body.userEmail) ?? req.user!.email,
-      brand_name: safeText(req.body.brand_name) ?? safeText(brand.brand_name),
-      brand_colors: safeStringArray(brand.brand_colors),
-      brand_style: safeText(brand.brand_style),
-      brand_text: safeText(brand.brand_text),
-      brand_voice: safeText(brand.brand_voice),
-      cta_style: safeText(brand.cta_style),
-      logo_url: safeText(brand.logo_url),
-      logo_position: safeText(brand.logo_position),
-      topic: safeText(req.body.topic),
-      tone: safeText(req.body.tone),
-      post_details: safeText(req.body.post_details),
-      context: safeText(req.body.context),
-      image_preference: safeText(req.body.image_preference),
-      image_prompt: safeText(req.body.image_prompt),
-      reference_image_url: safeText(req.body.reference_image_url),
+      brand_name: safeText(req.body.brand_name) ?? safeText(brand.brand_name) ?? "",
+      topic: safeText(req.body.topic) ?? "",
+      tone: safeText(req.body.tone) ?? "",
+      post_details: safeText(req.body.post_details) ?? "",
+      context: safeText(req.body.context) ?? "",
+      image_preference: safeText(req.body.image_preference) ?? "",
+      image_prompt: safeText(req.body.image_prompt) ?? "",
+      reference_image_url: safeText(req.body.reference_image_url) ?? "",
     };
 
-    if (!workflow1Payload.topic || !workflow1Payload.tone || !workflow1Payload.context) {
-      res.status(400).json({ message: "topic, tone and context are required" });
+    if (
+      !workflow1Payload.userId ||
+      !workflow1Payload.userEmail ||
+      !workflow1Payload.brand_name ||
+      !workflow1Payload.topic ||
+      !workflow1Payload.tone ||
+      !workflow1Payload.context
+    ) {
+      res.status(400).json({
+        message:
+          "Required fields: userId, userEmail, brand_name, topic, tone, context",
+      });
       return;
     }
 
@@ -293,6 +311,19 @@ export const generatePostDraft = async (
       return;
     }
 
+    await createNotification({
+      userId: authUserId,
+      brandId: brand._id,
+      postId: createdPost._id,
+      type: "post_generated",
+      title: "Post generated",
+      message: `A new post draft for brand "${brand.brand_name}" is ready for review.`,
+      metadata: {
+        topic: workflow1Payload.topic,
+      },
+      eventKey: `post_generated:${authUserId}:${createdPost._id}`,
+    });
+
     res.status(201).json({
       post: mapPostToFrontend(createdPost),
       workflow1: workflow1Data,
@@ -328,21 +359,25 @@ export const publishDraftPost = async (
       return;
     }
 
+    const workflow1FromBody = extractWorkflow1FromBody(req.body);
+
     const post = await Post.findOne({
       _id: postId,
       user_id: req.user!._id.toString(),
       status: { $ne: "deleted" },
     }).lean();
 
-    if (!post) {
+    if (!post && !workflow1FromBody) {
       res.status(404).json({ message: "Post not found" });
       return;
     }
 
-    const workflow1Raw = post.workflow1_output;
+    const workflow1Raw = workflow1FromBody ?? post?.workflow1_output;
     const workflow1Data = (workflow1Raw ?? {}) as Workflow1Output;
     if (!workflow1Data.content) {
-      res.status(400).json({ message: "Draft has no workflow1 output to publish" });
+      res.status(400).json({
+        message: "workflow1_output with content is required in body or stored on the draft",
+      });
       return;
     }
 
@@ -359,6 +394,13 @@ export const publishDraftPost = async (
 
     const workflow2Res = await axios.post(workflow2Url, publishPayload, { timeout: 120000 });
     const workflow2Data = normalizeWebhookData<unknown>(workflow2Res.data);
+
+    if (!post) {
+      res.status(200).json({
+        workflow2: workflow2Data,
+      });
+      return;
+    }
 
     const now = new Date();
     const updated = await Post.findOneAndUpdate(
@@ -381,6 +423,20 @@ export const publishDraftPost = async (
       res.status(404).json({ message: "Post not found after publishing" });
       return;
     }
+
+    const authUserId = req.user!._id.toString();
+    await createNotification({
+      userId: authUserId,
+      brandId: updated.brandId,
+      postId: updated._id,
+      type: "post_published",
+      title: "Post published",
+      message: `A post for brand "${updated.brandId}" was published successfully.`,
+      metadata: {
+        publishedAt: updated.published_at?.toISOString(),
+      },
+      eventKey: `post_published:${authUserId}:${updated._id}`,
+    });
 
     res.status(200).json({
       post: mapPostToFrontend(updated),
@@ -456,6 +512,20 @@ export const approvePost = async (
       res.status(404).json({ message: "Post not found" });
       return;
     }
+
+    const authUserId = req.user!._id.toString();
+    await createNotification({
+      userId: authUserId,
+      brandId: post.brandId,
+      postId: post._id,
+      type: "post_published",
+      title: "Post published",
+      message: `A post for brand "${post.brandId}" was approved and published.`,
+      metadata: {
+        publishedAt: post.published_at?.toISOString(),
+      },
+      eventKey: `post_published:${authUserId}:${post._id}`,
+    });
 
     res.status(200).json(mapPostToFrontend(post));
   } catch (error) {

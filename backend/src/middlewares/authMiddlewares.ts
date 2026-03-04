@@ -11,6 +11,31 @@ interface CustomJwtPayload extends JwtPayload {
   sub?: string;
 }
 
+const findUserFromTokenId = async (tokenUserId: string) => {
+  try {
+    const user = await User.findById(tokenUserId)
+      .select("-password")
+      .lean<Omit<IUser, "password"> & { _id: string }>();
+    if (user) return user;
+  } catch (error) {
+    if (!(error instanceof mongoose.Error.CastError)) {
+      throw error;
+    }
+  }
+
+  const rawUser = await User.collection.findOne({ _id: tokenUserId as unknown as mongoose.Types.ObjectId });
+  if (!rawUser) return null;
+
+  const { password: _password, ...rest } = rawUser as Record<string, unknown> & {
+    _id: unknown;
+  };
+
+  return {
+    ...rest,
+    _id: String(rest._id),
+  } as Omit<IUser, "password"> & { _id: string };
+};
+
 export const protectRoute = async (
   req: Request,
   res: Response,
@@ -46,14 +71,7 @@ export const protectRoute = async (
       return;
     }
 
-    if (!mongoose.isValidObjectId(tokenUserId)) {
-      res.status(401).json({ message: "Unauthorized - Invalid token" });
-      return;
-    }
-
-    const user = await User.findById(tokenUserId)
-      .select("-password")
-      .lean<Omit<IUser, "password"> & { _id: string }>();
+    const user = await findUserFromTokenId(tokenUserId);
 
     if (!user) {
       res.status(404).json({ message: "User not found" });

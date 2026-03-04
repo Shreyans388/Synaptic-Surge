@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { href: "/studio", label: "Studio" },
   { href: "/review", label: "Review Queue" },
   { href: "/intelligence", label: "Intelligence" },
+  { href: "/notifications", label: "Notifications" },
   { href: "/settings", label: "Settings" },
 ];
 

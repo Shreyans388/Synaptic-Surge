@@ -8,13 +8,13 @@ import ReviewDrawer from "@/modules/review/ReviewDrawer";
 import { Post } from "@/types/domain.type";
 
 export default function ReviewPage() {
-  const activeBrandId = useGlobalStore((s) => s.activeBrand);
+  const activeBrand = useGlobalStore((s) => s.activeBrand);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
   const { data: posts = [], isLoading } = useQuery<Post[]>({
-    queryKey: ["posts", activeBrandId],
-    queryFn: () => getPosts(activeBrandId?.id as string),
-    enabled: !!activeBrandId,
+    queryKey: ["posts", activeBrand?._id],
+    queryFn: () => getPosts(activeBrand?._id as string),
+    enabled: !!activeBrand?._id,
   });
 
   if (isLoading) return <div className="p-6">Loading...</div>;

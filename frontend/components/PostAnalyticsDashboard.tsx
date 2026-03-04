@@ -265,7 +265,15 @@ const DarkDashboard = () => {
   );
 };
 
-const KpiCard = ({ title, value, icon, color, bgColor }) => (
+interface KpiCardProps {
+  title: string;
+  value: string;
+  icon: React.ReactNode;
+  color: string;
+  bgColor: string;
+}
+
+const KpiCard = ({ title, value, icon, color, bgColor }: KpiCardProps) => (
   <div className="analytics-card p-6 rounded-3xl flex flex-col gap-4">
     <div className={`w-fit p-3 rounded-2xl ${bgColor} ${color}`}>
       {icon}

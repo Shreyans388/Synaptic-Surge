@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ComponentType } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Linkedin, Instagram, Twitter, Plus } from "lucide-react";
+import { Linkedin, Instagram, Twitter, Plus, Pencil } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 // Stores
@@ -51,6 +51,8 @@ export default function SettingsPage() {
   const logout = useAuthStore((s) => s.logout);
 
   const [newBrandName, setNewBrandName] = useState("");
+  const [isAddBrandOpen, setIsAddBrandOpen] = useState(false);
+  const [isBrandProfileOpen, setIsBrandProfileOpen] = useState(true);
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
 
   const oauthStatus = searchParams.get("status") || searchParams.get("linkedin_connected");
@@ -75,6 +77,12 @@ export default function SettingsPage() {
     setActiveBrand({ _id: first._id, name: first.name });
   }, [activeBrand, brandsQuery.data, setActiveBrand]);
 
+  useEffect(() => {
+    if (activeBrand?._id) {
+      setIsBrandProfileOpen(true);
+    }
+  }, [activeBrand?._id]);
+
   const selectedBrandRecord =
     activeBrand?._id && brandsQuery.data
       ? brandsQuery.data.find((brand) => brand._id === activeBrand._id) ?? null
@@ -90,6 +98,7 @@ export default function SettingsPage() {
     mutationFn: () => createBrand({ name: newBrandName.trim() }),
     onSuccess: (brand: BrandRecord) => {
       setNewBrandName("");
+      setIsAddBrandOpen(false);
       setActiveBrand({ _id: brand._id, name: brand.name });
       queryClient.invalidateQueries({ queryKey: ["brands"] });
     },
@@ -118,6 +127,7 @@ export default function SettingsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["brands"] });
+      setIsBrandProfileOpen(false);
       alert("Profile saved successfully!");
     },
   });
@@ -196,38 +206,72 @@ export default function SettingsPage() {
           ))}
         </div>
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (!newBrandName.trim()) return;
-            createBrandMutation.mutate();
-          }}
-          className="flex gap-2"
-        >
-          <input
-            value={newBrandName}
-            onChange={(e) => setNewBrandName(e.target.value)}
-            placeholder="Add a new brand"
-            className="flex-1 rounded-xl border border-(--border) bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
-          />
+        {!isAddBrandOpen ? (
           <button
-            type="submit"
-            disabled={createBrandMutation.isPending}
-            className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-70"
+            type="button"
+            onClick={() => setIsAddBrandOpen(true)}
+            className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700"
           >
             <Plus size={16} /> Add Brand
           </button>
-        </form>
+        ) : (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!newBrandName.trim()) return;
+              createBrandMutation.mutate();
+            }}
+            className="flex gap-2"
+          >
+            <input
+              value={newBrandName}
+              onChange={(e) => setNewBrandName(e.target.value)}
+              placeholder="Add a new brand"
+              className="flex-1 rounded-xl border border-(--border) bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+            />
+            <button
+              type="submit"
+              disabled={createBrandMutation.isPending}
+              className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-70"
+            >
+              <Plus size={16} /> Save
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setNewBrandName("");
+                setIsAddBrandOpen(false);
+              }}
+              className="rounded-xl border border-(--border) px-4 py-2 text-sm font-medium hover:border-(--border-strong)"
+            >
+              Cancel
+            </button>
+          </form>
+        )}
       </section>
 
       <section className="space-y-4 rounded-2xl border border-(--border) bg-(--surface) p-5">
-        <div>
-          <h2 className="text-lg font-semibold">Brand Profile</h2>
-          <p className="text-sm text-(--muted)">Save voice and creative metadata for this brand.</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Brand Profile</h2>
+            <p className="text-sm text-(--muted)">Save voice and creative metadata for this brand.</p>
+          </div>
+          {activeBrand && selectedBrandRecord ? (
+            <button
+              type="button"
+              onClick={() => setIsBrandProfileOpen((prev) => !prev)}
+              className="inline-flex items-center gap-2 rounded-xl border border-(--border) px-3 py-2 text-sm font-medium hover:border-(--border-strong)"
+            >
+              <Pencil size={14} />
+              {isBrandProfileOpen ? "Close" : "Edit Profile"}
+            </button>
+          ) : null}
         </div>
 
         {!activeBrand || !selectedBrandRecord ? (
           <p className="text-sm text-(--muted)">Create or select a brand first.</p>
+        ) : !isBrandProfileOpen ? (
+          <p className="text-sm text-(--muted)">Brand profile is collapsed. Click "Edit Profile" to open it.</p>
         ) : (
           <form
             key={selectedBrandRecord._id}

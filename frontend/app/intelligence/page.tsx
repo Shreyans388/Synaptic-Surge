@@ -1,17 +1,26 @@
 "use client";
 
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useGlobalStore } from "@/state/global.store";
 import { getPosts } from "@/services/api/posts.api";
+import { syncAnalyticsNotifications } from "@/services/api/notifications.api";
 
 export default function IntelligencePage() {
-  const activeBrandId = useGlobalStore((s) => s.activeBrand);
+  const activeBrand = useGlobalStore((s) => s.activeBrand);
 
   const { data: posts = [] } = useQuery({
-    queryKey: ["posts", activeBrandId],
-    queryFn: () => getPosts(activeBrandId?.id as string),
-    enabled: !!activeBrandId,
+    queryKey: ["posts", activeBrand?._id],
+    queryFn: () => getPosts(activeBrand?._id as string),
+    enabled: !!activeBrand?._id,
   });
+
+  useEffect(() => {
+    if (!activeBrand?._id) return;
+    syncAnalyticsNotifications(activeBrand._id).catch((error) => {
+      console.error("Failed to sync analytics notifications:", error);
+    });
+  }, [activeBrand?._id]);
 
   const engagementScore =
     posts.length > 0

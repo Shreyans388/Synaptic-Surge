@@ -21,10 +21,25 @@ const connectDB = async (): Promise<void> => {
     const brandsCollection = db.collection("brands");
     const indexes = await brandsCollection.indexes();
     const hasLegacyNameIndex = indexes.some((idx) => idx.name === "name_1");
+    const hasLegacyBrandNameIndex = indexes.some((idx) => idx.name === "brand_name_1");
+    const hasScopedBrandIndex = indexes.some((idx) => idx.name === "userId_1_brand_name_1");
 
     if (hasLegacyNameIndex) {
       await brandsCollection.dropIndex("name_1");
       console.log("Dropped legacy brands index: name_1");
+    }
+
+    if (hasLegacyBrandNameIndex) {
+      await brandsCollection.dropIndex("brand_name_1");
+      console.log("Dropped legacy brands index: brand_name_1");
+    }
+
+    if (!hasScopedBrandIndex) {
+      await brandsCollection.createIndex(
+        { userId: 1, brand_name: 1 },
+        { unique: true, name: "userId_1_brand_name_1" }
+      );
+      console.log("Created scoped brands index: userId_1_brand_name_1");
     }
 
     console.log(`Connected to MongoDB database: ${mongoDbName}`);
