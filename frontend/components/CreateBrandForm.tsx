@@ -5,10 +5,12 @@ import { useBrandStore } from "@/state/brand.store";
 
 interface CreateBrandFormProps {
   onSuccess?: () => void;
+  onCancel?: () => void;
 }
 
 export default function CreateBrandForm({
   onSuccess,
+  onCancel,
 }: CreateBrandFormProps) {
   const { createBrand, isCreatingBrand, setActiveBrand } =
     useBrandStore();
@@ -52,80 +54,94 @@ export default function CreateBrandForm({
       setCtaStyle("");
 
       onSuccess?.();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to create brand";
+      setError(message);
     }
   };
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="p-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0B0E14] space-y-4"
+      className="space-y-4"
     >
-      <h2 className="text-lg font-bold dark:text-white">
+      <h2 className="text-xl font-semibold">
         Create Brand
       </h2>
 
-      <input
-        type="text"
-        placeholder="Brand Name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        required
-        className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent"
-      />
+      <div className="grid gap-3 md:grid-cols-2">
+        <input
+          type="text"
+          placeholder="Brand Name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          required
+          className="ui-input md:col-span-2"
+        />
 
-      <textarea
-        placeholder="Brand Description"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        rows={2}
-        className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent"
-      />
+        <textarea
+          placeholder="Brand Description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={2}
+          className="ui-input md:col-span-2"
+        />
 
-      <input
-        type="text"
-        placeholder="Brand Voice"
-        value={brandVoice}
-        onChange={(e) => setBrandVoice(e.target.value)}
-        className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent"
-      />
+        <input
+          type="text"
+          placeholder="Brand Voice"
+          value={brandVoice}
+          onChange={(e) => setBrandVoice(e.target.value)}
+          className="ui-input"
+        />
 
-      <input
-        type="text"
-        placeholder="Brand Style"
-        value={brandStyle}
-        onChange={(e) => setBrandStyle(e.target.value)}
-        className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent"
-      />
+        <input
+          type="text"
+          placeholder="Brand Style"
+          value={brandStyle}
+          onChange={(e) => setBrandStyle(e.target.value)}
+          className="ui-input"
+        />
 
-      <input
-        type="text"
-        placeholder="Brand Colors (#0ea5e9,#111827)"
-        value={brandColors}
-        onChange={(e) => setBrandColors(e.target.value)}
-        className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent"
-      />
+        <input
+          type="text"
+          placeholder="Brand Colors (#0ea5e9,#111827)"
+          value={brandColors}
+          onChange={(e) => setBrandColors(e.target.value)}
+          className="ui-input"
+        />
 
-      <input
-        type="text"
-        placeholder="CTA Style"
-        value={ctaStyle}
-        onChange={(e) => setCtaStyle(e.target.value)}
-        className="w-full p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-transparent"
-      />
+        <input
+          type="text"
+          placeholder="CTA Style"
+          value={ctaStyle}
+          onChange={(e) => setCtaStyle(e.target.value)}
+          className="ui-input"
+        />
+      </div>
 
       {error && (
         <p className="text-sm text-red-500">{error}</p>
       )}
 
-      <button
-        type="submit"
-        disabled={isCreatingBrand}
-        className="px-5 py-2 bg-sky-600 text-white rounded-xl font-semibold hover:bg-sky-700 transition disabled:opacity-50"
-      >
-        {isCreatingBrand ? "Creating..." : "Save Brand"}
-      </button>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {onCancel ? (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="ui-btn-secondary"
+          >
+            Cancel
+          </button>
+        ) : null}
+        <button
+          type="submit"
+          disabled={isCreatingBrand}
+          className="ui-btn-primary"
+        >
+          {isCreatingBrand ? "Creating..." : "Save Brand"}
+        </button>
+      </div>
     </form>
   );
 }

@@ -241,3 +241,52 @@
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
+
+@layer components {
+  .ui-panel {
+    @apply rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[0_10px_30px_rgba(0,0,0,0.25)];
+  }
+
+  .ui-input {
+    @apply w-full rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] px-3 py-2.5 text-sm text-[var(--foreground)] outline-none transition;
+    @apply placeholder:text-[color:color-mix(in_srgb,var(--muted)_90%,white_10%)];
+    @apply focus:border-sky-500/70 focus:ring-2 focus:ring-sky-500/25;
+  }
+
+  .ui-select {
+    @apply w-full appearance-none rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] px-3 py-2.5 pr-9 text-sm text-[var(--foreground)] outline-none transition;
+    @apply placeholder:text-[color:color-mix(in_srgb,var(--muted)_90%,white_10%)];
+    @apply focus:border-sky-500/70 focus:ring-2 focus:ring-sky-500/25;
+    background-image:
+      linear-gradient(45deg, transparent 50%, #94a3b8 50%),
+      linear-gradient(135deg, #94a3b8 50%, transparent 50%);
+    background-position:
+      calc(100% - 16px) calc(50% - 1px),
+      calc(100% - 10px) calc(50% - 1px);
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+  }
+
+  .ui-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition;
+    @apply hover:bg-sky-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/60 disabled:cursor-not-allowed disabled:opacity-65;
+  }
+
+  .ui-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] px-4 py-2.5 text-sm font-medium text-[var(--foreground)] transition;
+    @apply hover:border-sky-500/50 hover:bg-[color:color-mix(in_srgb,var(--surface-elevated)_90%,#0ea5e9_10%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/30;
+  }
+
+  .ui-btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition;
+    @apply hover:bg-red-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/50 disabled:cursor-not-allowed disabled:opacity-65;
+  }
+
+  .ui-dialog-backdrop {
+    @apply fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm;
+  }
+
+  .ui-dialog-panel {
+    @apply w-full rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-[0_30px_80px_rgba(0,0,0,0.45)];
+  }
+}

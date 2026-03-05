@@ -128,7 +128,7 @@ export default function PostAnalyticsDashboard({ posts }: Props) {
           <select
             value={selectedPost.id}
             onChange={(e) => setSelectedPostId(e.target.value)}
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] px-3 py-2 text-sm"
+            className="ui-select"
           >
             {postsWithAi.map((post) => (
               <option key={post.id} value={post.id}>

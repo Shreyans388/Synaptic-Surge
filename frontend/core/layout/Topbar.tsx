@@ -42,15 +42,7 @@ export default function Topbar() {
                   setActiveBrand(selected._id);
                 }
               }}
-              className="
-                bg-[var(--surface-elevated)]
-                text-[var(--foreground)]
-                border border-[var(--border)]
-                rounded-lg
-                px-2 py-1
-                outline-none
-                focus:ring-1 focus:ring-[var(--accent)]
-              "
+              className="ui-select py-1.5 text-xs"
             >
               <option value="">None</option>
 

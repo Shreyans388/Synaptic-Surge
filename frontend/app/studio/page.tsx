@@ -81,6 +81,16 @@ export default function StudioPage() {
   >({});
   const generatingToastIdRef = useRef<string | number | null>(null);
 
+  const resetDialogForm = () => setForm(initialState);
+  const openDialog = () => {
+    resetDialogForm();
+    setOpen(true);
+  };
+  const closeDialog = () => {
+    setOpen(false);
+    resetDialogForm();
+  };
+
   const { data: posts = [] } = useQuery<Post[]>({
     queryKey: ["posts", activeBrand?._id],
     queryFn: () => getPosts(activeBrand?._id as string),
@@ -165,7 +175,7 @@ export default function StudioPage() {
       });
     },
     onMutate: () => {
-      setOpen(false);
+      closeDialog();
       generatingToastIdRef.current = toast.loading("Post is generating...");
     },
     onSuccess: () => {
@@ -233,8 +243,8 @@ export default function StudioPage() {
           </p>
         </div>
         <button
-          onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700"
+          onClick={openDialog}
+          className="ui-btn-primary"
         >
           <Plus size={16} /> Generate Draft
         </button>
@@ -323,7 +333,7 @@ export default function StudioPage() {
                             [post.id]: e.target.value,
                           }))
                         }
-                        className="w-full rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                        className="ui-input"
                       />
                     </label>
                     <button
@@ -346,7 +356,7 @@ export default function StudioPage() {
                         });
                       }}
                       disabled={publishMutation.isPending || selectedPlatforms.length === 0}
-                      className="self-end inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-70"
+                      className="self-end inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-65"
                     >
                       <Send size={14} />
                       {publishMutation.isPending ? "Publishing..." : "Publish"}
@@ -360,13 +370,13 @@ export default function StudioPage() {
       </section>
 
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-3xl rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl">
+        <div className="ui-dialog-backdrop">
+          <div className="ui-dialog-panel max-w-3xl">
             <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
               <h3 className="text-lg font-semibold">Create Workflow 1 Payload</h3>
               <button
-                onClick={() => setOpen(false)}
-                className="rounded-lg border border-[var(--border)] p-2 hover:border-[var(--border-strong)]"
+                onClick={closeDialog}
+                className="ui-btn-secondary rounded-lg p-2"
               >
                 <X size={16} />
               </button>
@@ -378,7 +388,7 @@ export default function StudioPage() {
                 <input
                   value={form.topic}
                   onChange={(e) => setForm((prev) => ({ ...prev, topic: e.target.value }))}
-                  className="w-full rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                  className="ui-input"
                   placeholder="Startup growth strategies"
                 />
               </label>
@@ -389,7 +399,7 @@ export default function StudioPage() {
                   <input
                     value={form.tone}
                     onChange={(e) => setForm((prev) => ({ ...prev, tone: e.target.value }))}
-                    className="w-full rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                    className="ui-input"
                     placeholder="Casual"
                   />
                 </label>
@@ -404,7 +414,7 @@ export default function StudioPage() {
                         imagePreference: e.target.value as FormState["imagePreference"],
                       }))
                     }
-                    className="w-full rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                    className="ui-select"
                   >
                     <option value="use_image">use_image</option>
                     <option value="generate_new">generate_new</option>
@@ -449,7 +459,7 @@ export default function StudioPage() {
                   value={form.postDetails}
                   onChange={(e) => setForm((prev) => ({ ...prev, postDetails: e.target.value }))}
                   rows={3}
-                  className="w-full rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                  className="ui-input"
                   placeholder="Keep it friendly, motivational, and easy to read"
                 />
               </label>
@@ -460,7 +470,7 @@ export default function StudioPage() {
                   value={form.context}
                   onChange={(e) => setForm((prev) => ({ ...prev, context: e.target.value }))}
                   rows={3}
-                  className="w-full rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                  className="ui-input"
                   placeholder="We help startups scale using AI automation and data-driven strategies"
                 />
               </label>
@@ -471,7 +481,7 @@ export default function StudioPage() {
                   <input
                     value={form.imagePrompt}
                     onChange={(e) => setForm((prev) => ({ ...prev, imagePrompt: e.target.value }))}
-                    className="w-full rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                    className="ui-input"
                     placeholder="Nice Technical"
                   />
                 </label>
@@ -481,7 +491,7 @@ export default function StudioPage() {
                   <input
                     value={form.referenceImageUrl}
                     onChange={(e) => setForm((prev) => ({ ...prev, referenceImageUrl: e.target.value }))}
-                    className="w-full rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                    className="ui-input"
                     placeholder="https://images.unsplash.com/..."
                   />
                 </label>
@@ -491,8 +501,8 @@ export default function StudioPage() {
             <div className="flex items-center justify-end gap-3 border-t border-[var(--border)] px-5 py-4">
               <button
                 type="button"
-                onClick={() => setOpen(false)}
-                className="rounded-xl border border-[var(--border)] px-4 py-2 text-sm font-medium"
+                onClick={closeDialog}
+                className="ui-btn-secondary"
               >
                 Cancel
               </button>
@@ -500,7 +510,7 @@ export default function StudioPage() {
                 type="button"
                 onClick={() => generateMutation.mutate()}
                 disabled={!canSubmit || generateMutation.isPending}
-                className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-70"
+                className="ui-btn-primary"
               >
                 {generateMutation.isPending ? "Generating..." : "Generate Draft"}
               </button>

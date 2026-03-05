@@ -65,7 +65,7 @@ export default function DashboardPage() {
     setBrandName("");
     setBrandDescription("");
   };
-  if(isLoadingBrands)return <Loading/>
+  if(isLoadingBrands)return <Loading />
 
   if (!activeBrand && brands.length === 0 && !showCreateBrand) {
     return (
