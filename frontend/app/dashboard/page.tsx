@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getPosts } from "@/services/api/posts.api";
+import { getBrandConnections } from "@/services/api/brand.api";
 import { useBrandStore } from "@/state/brand.store";
 import { Post } from "@/types/domain.type";
 import {
@@ -11,8 +12,11 @@ import {
   LayoutGrid,
   Plus,
 } from "lucide-react";
+
 import PostAnalyticsDashboard from "@/components/PostAnalyticsDashboard";
 import CreateBrandForm from "@/components/CreateBrandForm";
+import SocialConnections from "@/components/SocialConnections";
+
 
 export default function DashboardPage() {
   const {
@@ -32,9 +36,17 @@ export default function DashboardPage() {
     fetchBrands();
   }, [fetchBrands]);
 
+  // POSTS QUERY
   const { data: posts = [] } = useQuery<Post[]>({
     queryKey: ["posts", activeBrand?._id],
     queryFn: () => getPosts(activeBrand?._id as string),
+    enabled: !!activeBrand?._id,
+  });
+
+  // CONNECTIONS QUERY
+  const { data: connections = [] } = useQuery({
+    queryKey: ["brand-connections", activeBrand?._id],
+    queryFn: () => getBrandConnections(activeBrand?._id as string),
     enabled: !!activeBrand?._id,
   });
 
@@ -92,14 +104,31 @@ export default function DashboardPage() {
 
       {/* BRAND FORM */}
       {showCreateBrand && (
-  <CreateBrandForm
-    onSuccess={() => setShowCreateBrand(false)}
-  />
-)}
+        <CreateBrandForm
+          onSuccess={() => setShowCreateBrand(false)}
+        />
+      )}
 
-      {/* POSTS SECTION */}
+      {/* ACTIVE BRAND CONTENT */}
       {activeBrand && (
         <>
+          {/* SOCIAL CONNECTIONS (ONLY IF NONE CONNECTED) */}
+          {connections.length === 0 && (
+            <div className="rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0B0E14] p-6">
+              <div className="mb-4">
+                <h2 className="text-lg font-bold dark:text-white">
+                  Connect your social platforms
+                </h2>
+                <p className="text-sm text-gray-500">
+                  Connect LinkedIn, Instagram, or Twitter to start publishing content.
+                </p>
+              </div>
+
+              <SocialConnections brandId={activeBrand._id} />
+            </div>
+          )}
+
+          {/* METRICS */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <MetricCard
               title="Total Fleet"
@@ -115,6 +144,7 @@ export default function DashboardPage() {
             />
           </div>
 
+          {/* ANALYTICS */}
           <PostAnalyticsDashboard posts={posts} />
         </>
       )}
@@ -134,6 +164,7 @@ function MetricCard({ title, value, icon: Icon, color }: any) {
             {value}
           </h3>
         </div>
+
         <div className={`p-3 rounded-2xl bg-gray-50 dark:bg-gray-800/50 ${color}`}>
           <Icon size={22} />
         </div>

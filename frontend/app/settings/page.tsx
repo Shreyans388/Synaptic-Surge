@@ -22,6 +22,7 @@ import {
   type BrandRecord,
   type SocialProvider,
 } from "@/services/api/brand.api";
+import SocialConnections from "@/components/SocialConnections";
 
 type LogoPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
 
@@ -337,70 +338,20 @@ export default function SettingsPage() {
         )}
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-(--border) bg-(--surface) p-5">
-        <div>
-          <h2 className="text-lg font-semibold">Social Connections</h2>
-          <p className="text-sm text-(--muted)">Connect LinkedIn, Instagram, and Twitter for your active brand.</p>
-        </div>
+     <section className="space-y-4 rounded-2xl border border-(--border) bg-(--surface) p-5">
+  <div>
+    <h2 className="text-lg font-semibold">Social Connections</h2>
+    <p className="text-sm text-(--muted)">
+      Connect LinkedIn, Instagram, and Twitter for your active brand.
+    </p>
+  </div>
 
-        {!activeBrand ? (
-          <p className="text-sm text-(--muted)">Create or select a brand first.</p>
-        ) : (
-          <>
-            {oauthStatus && (
-              <p className={`text-sm ${oauthStatus === "connected" || oauthStatus === "true" ? "text-green-600" : "text-amber-600"}`}>
-                OAuth {oauthProvider ? `(${oauthProvider}) ` : ""}status: {oauthStatus === "true" ? "connected" : oauthStatus}
-              </p>
-            )}
-
-            <div className="grid gap-3 md:grid-cols-3">
-              {PROVIDERS.map((provider) => {
-                const Icon = provider.icon;
-                const isConnected = connectedPlatforms.has(provider.key);
-                const isConnectingThis = connectingProvider === provider.key;
-
-                return (
-                  <article key={provider.key} className="rounded-xl border border-(--border) bg-(--surface-elevated) p-4">
-                    <div className="mb-4 flex items-center justify-between">
-                      <div className="inline-flex items-center gap-2 text-sm font-semibold">
-                        <Icon size={16} /> {provider.label}
-                      </div>
-                      <span
-                        className={`rounded-md px-2 py-1 text-xs font-semibold ${
-                          isConnected
-                            ? "bg-green-500/10 text-green-700 dark:text-green-300"
-                            : "bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                        }`}
-                      >
-                        {isConnected ? "Connected" : "Not connected"}
-                      </span>
-                    </div>
-
-                    {isConnected ? (
-                      <button
-                        onClick={() => disconnectMutation.mutate({ brandId: activeBrand._id, provider: provider.key })}
-                        disabled={disconnectMutation.isPending}
-                        className="w-full rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-900/40 dark:hover:bg-red-950/20 disabled:opacity-50"
-                      >
-                        {disconnectMutation.isPending ? "Disconnecting..." : "Disconnect"}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleOAuthConnect(provider.key)}
-                        disabled={isConnectingThis}
-                        className="w-full rounded-lg bg-sky-600 px-3 py-2 text-center text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-50"
-                      >
-                        {isConnectingThis ? "Redirecting..." : `Connect ${provider.label}`}
-                      </button>
-                    )}
-                  </article>
-                );
-              })}
-            </div>
-          </>
-        )}
-      </section>
-
+  <SocialConnections
+    brandId={activeBrand?._id}
+    oauthStatus={oauthStatus}
+    oauthProvider={oauthProvider}
+  />
+</section>
       <section className="space-y-3 rounded-2xl border border-(--border) bg-(--surface) p-5">
         <h2 className="text-lg font-semibold">Account</h2>
         <button
