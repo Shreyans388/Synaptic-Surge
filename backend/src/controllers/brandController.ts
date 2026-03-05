@@ -203,28 +203,20 @@ export const getBrands = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const brandIds = brands.map((brand) => brand._id.toString());
     const socialAccounts = await SocialAccount.find({
-      user: userId,
-      brand: { $in: brandIds },
+      user_id: userId,
     })
-      .select("brand platform")
+      .select("platform")
       .lean();
 
-    const connectionsByBrand = socialAccounts.reduce<Record<string, PlatformType[]>>(
-      (acc, account) => {
-        const key = account.brand.toString();
-        if (!acc[key]) acc[key] = [];
-        acc[key].push(account.platform);
-        return acc;
-      },
-      {}
-    );
+    const connectedPlatforms = Array.from(
+      new Set(socialAccounts.map((account) => account.platform))
+    ) as PlatformType[];
 
     res.status(200).json(
       brands.map((brand) => ({
         ...toBrandResponse(brand as unknown as Record<string, unknown>),
-        connectedPlatforms: connectionsByBrand[brand._id.toString()] ?? [],
+        connectedPlatforms,
       }))
     );
   } catch (error) {
@@ -246,10 +238,9 @@ export const getBrandConnections = async (
 
     const userId = req.user!._id.toString();
     const connections = await SocialAccount.find({
-      user: userId,
-      brand: brandId,
+      user_id: userId,
     })
-      .select("platform expires_at updatedAt")
+      .select("platform expires_at updated_at updatedAt")
       .lean();
 
     res.status(200).json(connections);
@@ -277,9 +268,8 @@ export const disconnectPlatform = async (
     }
 
     const deleted = await SocialAccount.findOneAndDelete({
-      brand: brandId,
       platform: provider,
-      user: req.user!._id.toString(),
+      user_id: req.user!._id.toString(),
     });
 
     if (!deleted) {

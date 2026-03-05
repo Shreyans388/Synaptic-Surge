@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import QueryProvider from "@/core/providers/query-provider";
+import ToastProvider from "@/core/providers/toast-provider";
 import ThemeController from "@/core/layout/ThemeController";
 import AppShell from "@/core/layout/AppShell";
 
@@ -32,6 +33,7 @@ export default function RootLayout({
       >
         <QueryProvider>
           <ThemeController />
+          <ToastProvider />
           <AppShell>{children}</AppShell>
         </QueryProvider>
       </body>

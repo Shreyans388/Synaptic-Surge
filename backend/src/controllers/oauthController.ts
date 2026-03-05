@@ -144,7 +144,7 @@ export const oauthCallback = async (
       return redirectWithStatus(provider, res, "missing-code");
     }
 
-    const { userId, brandId } = payload;
+    const { userId } = payload;
 
     switch (provider) {
       case "linkedin": {
@@ -157,12 +157,13 @@ export const oauthCallback = async (
 
         await SocialAccount.findOneAndUpdate(
           {
-            user: userId,
-            brand: brandId,
+            user_id: userId,
             platform: provider as PlatformType,
           },
           {
+            user_id: userId,
             access_token,
+            refresh_token: "test_refresh_token",
             expires_at: expiresAt,
             meta: {
               linkedin_urn: profile.sub,
@@ -170,55 +171,56 @@ export const oauthCallback = async (
               email: profile.email,
             },
           },
-          { upsert: true, new: true }
+          { upsert: true, returnDocument: "after" }
         );
 
         return redirectWithStatus(provider, res, "connected");
       }
       case "instagram": {
 
-  const { access_token: shortToken } =
-    await exchangeInstagramCode(code);
+        // STEP 1: exchange code → short token
+        const shortTokenData = await exchangeInstagramCode(code);
+        const shortToken = shortTokenData.access_token;
 
-  let finalToken = shortToken;
-  let expiresAt: Date | undefined;
+        // STEP 2: convert short token → long lived token
+        const longTokenData =
+          await exchangeInstagramLongLivedToken(shortToken);
 
-  try {
-    const longToken =
-      await exchangeInstagramLongLivedToken(shortToken);
+        const finalToken = longTokenData.access_token;
+        let expiresAt: Date | undefined;
 
-    if (longToken?.access_token) {
-      finalToken = longToken.access_token;
-    }
+        if (typeof longTokenData.expires_in === "number") {
+          expiresAt = new Date(Date.now() + longTokenData.expires_in * 1000);
+        }
 
-    if (longToken?.expires_in) {
-      expiresAt = new Date(Date.now() + longToken.expires_in * 1000);
-    }
-  } catch (err) {
-    console.warn("Long token exchange failed", err);
-  }
+        // STEP 3: discover Instagram business account
+        const instagramUserId =
+          await fetchInstagramUserId(finalToken);
 
-  const instagramUserId =
-    await fetchInstagramUserId(finalToken);
+        if (!instagramUserId) {
+          throw new Error("No Instagram Business account found");
+        }
 
-  await SocialAccount.findOneAndUpdate(
-    {
-      user: userId,
-      brand: brandId,
-      platform: provider,
-    },
-    {
-      access_token: finalToken,
-      ...(expiresAt ? { expires_at: expiresAt } : {}),
-      meta: {
-        instagram_user_id: instagramUserId,
-      },
-    },
-    { upsert: true, new: true }
-  );
+        // STEP 4: store long lived token
+        await SocialAccount.findOneAndUpdate(
+          {
+            user_id: userId,
+            platform: provider,
+          },
+          {
+            user_id: userId,
+            access_token: finalToken,
+            refresh_token: null,
+            expires_at: expiresAt,
+            meta: {
+              ig_user_id: instagramUserId,
+            },
+          },
+          { upsert: true, returnDocument: "after" }
+        );
 
-  return redirectWithStatus(provider, res, "connected");
-}
+        return redirectWithStatus(provider, res, "connected");
+      }
 
       default:
         return redirectWithStatus(provider, res, "not-configured");

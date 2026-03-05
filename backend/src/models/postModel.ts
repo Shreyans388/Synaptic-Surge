@@ -6,6 +6,7 @@ export interface IPost {
   user_id: string;
   brandId: string;
   content: Record<string, unknown> | string;
+  platforms?: string[];
   image_url?: string;
   results?: Array<Record<string, unknown>>;
   old_id?: string;
@@ -62,6 +63,10 @@ const postSchema = new Schema<IPost>(
       type: Schema.Types.Mixed,
       required: true,
     },
+    platforms: {
+      type: [String],
+      default: [],
+    },
 
     image_url: {
       type: String,
@@ -87,7 +92,7 @@ const postSchema = new Schema<IPost>(
     tracking: {
       enabled: {
         type: Boolean,
-        default: false,
+        default: true,
       },
       interval_hours: {
         type: Number,
@@ -112,7 +117,10 @@ const postSchema = new Schema<IPost>(
       default: 1,
     },
     analytics: { type: Schema.Types.Mixed },
-    ai_response: { type: Schema.Types.Mixed },
+    ai_response: {
+      type: Schema.Types.Mixed,
+      default: () => ({}),
+    },
   },
   {
     timestamps: {

@@ -1,19 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, Plus, Send, X } from "lucide-react";
+import { toast } from "sonner";
 import { useGlobalStore } from "@/state/global.store";
 import { useAuthStore } from "@/state/auth.store";
 import { generateDraftPost, getPosts, publishDraftPost } from "@/services/api/posts.api";
+import { getBrandConnections } from "@/services/api/brand.api";
 import { Post } from "@/types/domain.type";
+
+type PublishPlatform = "linkedin" | "instagram";
 
 interface FormState {
   topic: string;
   tone: string;
   postDetails: string;
   context: string;
-  imagePreference: "use_reference" | "generate_new";
+  imagePreference: "use_image" | "generate_new" | "use_reference" | "no_image";
   imagePrompt: string;
   referenceImageUrl: string;
 }
@@ -36,6 +40,10 @@ export default function StudioPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(initialState);
   const [scheduleByPost, setScheduleByPost] = useState<Record<string, string>>({});
+  const [selectedPlatformsByPost, setSelectedPlatformsByPost] = useState<
+    Record<string, PublishPlatform[]>
+  >({});
+  const generatingToastIdRef = useRef<string | number | null>(null);
 
   const { data: posts = [] } = useQuery<Post[]>({
     queryKey: ["posts", activeBrand?._id],
@@ -43,10 +51,47 @@ export default function StudioPage() {
     enabled: !!activeBrand?._id,
   });
 
+  const { data: connections = [] } = useQuery({
+    queryKey: ["brand-connections", activeBrand?._id],
+    queryFn: () => getBrandConnections(activeBrand!._id),
+    enabled: Boolean(activeBrand?._id),
+  });
+
+  const connectedPublishPlatforms = useMemo(() => {
+    const connectedSet = new Set(connections.map((connection) => connection.platform));
+    const platforms: PublishPlatform[] = [];
+    if (connectedSet.has("linkedin")) platforms.push("linkedin");
+    if (connectedSet.has("instagram")) platforms.push("instagram");
+    return platforms;
+  }, [connections]);
+
   const draftPosts = useMemo(
     () => posts.filter((post) => post.overallStatus !== "published"),
     [posts]
   );
+
+  const getAvailablePlatformsForPost = (post: Post): PublishPlatform[] => {
+    const inDraft = new Set(post.platformDrafts.map((draft) => draft.platform));
+    return connectedPublishPlatforms.filter((platform) => inDraft.has(platform));
+  };
+
+  useEffect(() => {
+    setSelectedPlatformsByPost((prev) => {
+      const next: Record<string, PublishPlatform[]> = {};
+      for (const post of draftPosts) {
+        const available = getAvailablePlatformsForPost(post);
+        if (available.length === 0) {
+          next[post.id] = [];
+          continue;
+        }
+
+        const existing = prev[post.id] ?? available;
+        const filtered = existing.filter((platform) => available.includes(platform));
+        next[post.id] = filtered.length > 0 ? filtered : available;
+      }
+      return next;
+    });
+  }, [draftPosts, connectedPublishPlatforms]);
 
   const canSubmit =
     !!activeBrand &&
@@ -73,10 +118,23 @@ export default function StudioPage() {
         reference_image_url: form.referenceImageUrl.trim(),
       });
     },
+    onMutate: () => {
+      setOpen(false);
+      generatingToastIdRef.current = toast.loading("Post is generating...");
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] });
       setForm(initialState);
-      setOpen(false);
+      toast.success("Draft generated successfully.", {
+        id: generatingToastIdRef.current ?? undefined,
+      });
+      generatingToastIdRef.current = null;
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to generate draft.", {
+        id: generatingToastIdRef.current ?? undefined,
+      });
+      generatingToastIdRef.current = null;
     },
   });
 
@@ -119,75 +177,104 @@ export default function StudioPage() {
         <p className="mt-1 text-sm text-[var(--muted)]">Signed-in user: {user?.email ?? "Not available"}</p>
       </section>
 
-      {generateMutation.isSuccess ? (
-        <p className="rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-700 dark:text-green-300">
-          Draft generated successfully.
-        </p>
-      ) : null}
-
-      {generateMutation.isError ? (
-        <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300">
-          {generateMutation.error.message}
-        </p>
-      ) : null}
-
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 space-y-4">
         <h2 className="text-lg font-semibold">Draft Queue</h2>
         {draftPosts.length === 0 ? (
           <p className="text-sm text-[var(--muted)]">No draft posts available.</p>
         ) : (
           <div className="space-y-3">
-            {draftPosts.map((post) => (
-              <div
-                key={post.id}
-                className="rounded-xl border border-[var(--border)] bg-transparent p-4 space-y-3"
-              >
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-semibold">{post.masterBrief.topic}</p>
-                    <p className="text-xs text-[var(--muted)] capitalize">Status: {post.overallStatus}</p>
-                  </div>
-                  <span className="text-xs text-[var(--muted)]">
-                    {post.platformDrafts.map((d) => d.platform).join(", ")}
-                  </span>
-                </div>
-
-                <p className="text-sm text-[var(--muted)] line-clamp-2">{post.platformDrafts[0]?.content}</p>
-
-                <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-                  <label className="space-y-1">
-                    <span className="text-xs font-medium text-[var(--muted)] flex items-center gap-1">
-                      <CalendarClock size={14} /> Scheduled time (optional)
+            {draftPosts.map((post) => {
+              const availablePlatforms = getAvailablePlatformsForPost(post);
+              const selectedPlatforms = selectedPlatformsByPost[post.id] ?? [];
+              return (
+                <div
+                  key={post.id}
+                  className="rounded-xl border border-[var(--border)] bg-transparent p-4 space-y-3"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold">{post.masterBrief.topic}</p>
+                      <p className="text-xs text-[var(--muted)] capitalize">Status: {post.overallStatus}</p>
+                    </div>
+                    <span className="text-xs text-[var(--muted)]">
+                      {post.platformDrafts.map((d) => d.platform).join(", ")}
                     </span>
-                    <input
-                      type="datetime-local"
-                      value={scheduleByPost[post.id] ?? ""}
-                      onChange={(e) =>
-                        setScheduleByPost((prev) => ({
-                          ...prev,
-                          [post.id]: e.target.value,
-                        }))
+                  </div>
+
+                  <p className="text-sm text-[var(--muted)] line-clamp-2">{post.platformDrafts[0]?.content}</p>
+
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-[var(--muted)]">Publish platforms</p>
+                    {availablePlatforms.length === 0 ? (
+                      <p className="text-xs text-amber-600">
+                        Connect LinkedIn or Instagram in Settings to publish this draft.
+                      </p>
+                    ) : (
+                      <div className="flex flex-wrap gap-3">
+                        {availablePlatforms.map((platform) => (
+                          <label key={platform} className="inline-flex items-center gap-2 text-sm">
+                            <input
+                              type="checkbox"
+                              checked={selectedPlatforms.includes(platform)}
+                              onChange={(e) => {
+                                setSelectedPlatformsByPost((prev) => {
+                                  const current = prev[post.id] ?? [];
+                                  if (e.target.checked) {
+                                    return {
+                                      ...prev,
+                                      [post.id]: Array.from(new Set([...current, platform])),
+                                    };
+                                  }
+
+                                  return {
+                                    ...prev,
+                                    [post.id]: current.filter((item) => item !== platform),
+                                  };
+                                });
+                              }}
+                            />
+                            <span className="capitalize">{platform}</span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+                    <label className="space-y-1">
+                      <span className="text-xs font-medium text-[var(--muted)] flex items-center gap-1">
+                        <CalendarClock size={14} /> Scheduled time (optional)
+                      </span>
+                      <input
+                        type="datetime-local"
+                        value={scheduleByPost[post.id] ?? ""}
+                        onChange={(e) =>
+                          setScheduleByPost((prev) => ({
+                            ...prev,
+                            [post.id]: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        publishMutation.mutate({
+                          postId: post.id,
+                          scheduledAt: scheduleByPost[post.id],
+                        })
                       }
-                      className="w-full rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      publishMutation.mutate({
-                        postId: post.id,
-                        scheduledAt: scheduleByPost[post.id],
-                      })
-                    }
-                    disabled={publishMutation.isPending}
-                    className="self-end inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-70"
-                  >
-                    <Send size={14} />
-                    {publishMutation.isPending ? "Publishing..." : "Publish"}
-                  </button>
+                      disabled={publishMutation.isPending || selectedPlatforms.length === 0}
+                      className="self-end inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-70"
+                    >
+                      <Send size={14} />
+                      {publishMutation.isPending ? "Publishing..." : "Publish"}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
@@ -239,8 +326,10 @@ export default function StudioPage() {
                     }
                     className="w-full rounded-xl border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
                   >
-                    <option value="use_reference">use_reference</option>
+                    <option value="use_image">use_image</option>
                     <option value="generate_new">generate_new</option>
+                    <option value="use_reference">use_reference</option>
+                    <option value="no_image">no_image</option>
                   </select>
                 </label>
               </div>

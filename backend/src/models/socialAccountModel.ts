@@ -1,34 +1,24 @@
-import { randomUUID } from "crypto";
 import { Schema, model } from "mongoose";
 
-export type PlatformType = "linkedin"| "facebook" | "instagram" | "twitter" | "reddit";
+export type PlatformType = "linkedin" | "instagram" | "twitter" | "reddit";
 
 export interface ISocialAccount {
   _id: string;
-  user: string;
-  brand: string;
+  user_id: string;
   platform: PlatformType;
   access_token: string;
+  refresh_token?: string | null;
   expires_at?: Date;
-  meta?: Record<string, any>;
+  meta?: Record<string, unknown>;
+  created_at: Date;
+  updated_at: Date;
 }
 
 const socialAccountSchema = new Schema<ISocialAccount>(
   {
-    _id: {
-      type: String,
-      default: () => randomUUID(),
-    },
-    user: {
+    user_id: {
       type: String,
       ref: "User",
-      required: true,
-      index: true,
-    },
-
-    brand: {
-      type: String,
-      ref: "Brand",
       required: true,
       index: true,
     },
@@ -43,20 +33,27 @@ const socialAccountSchema = new Schema<ISocialAccount>(
       type: String,
       required: true,
     },
+    refresh_token: {
+      type: String,
+      default: null,
+    },
 
     expires_at: Date,
 
     meta: Schema.Types.Mixed,
   },
-  { 
-    timestamps: true,
-    collection: "social_accounts" 
-   }
+  {
+    timestamps: {
+      createdAt: "created_at",
+      updatedAt: "updated_at",
+    },
+    collection: "social_accounts",
+  }
 );
 
-// Prevent duplicate platform connection per brand
+// Prevent duplicate platform connection per user
 socialAccountSchema.index(
-  { user: 1, brand: 1, platform: 1 },
+  { user_id: 1, platform: 1 },
   { unique: true }
 );
 

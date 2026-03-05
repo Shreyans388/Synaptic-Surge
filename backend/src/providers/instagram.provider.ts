@@ -1,5 +1,6 @@
 import axios from "axios";
 
+/* ------------------------------------------------ */
 export const getInstagramAuthUrl = (state: string) => {
   const CLIENT_ID = process.env.INSTAGRAM_CLIENT_ID;
   const REDIRECT_URI = process.env.INSTAGRAM_REDIRECT_URI;
@@ -22,6 +23,9 @@ export const getInstagramAuthUrl = (state: string) => {
 };
 
 
+/* ------------------------------------------------ */
+/* STEP 1: CODE → SHORT TOKEN */
+
 export const exchangeInstagramCode = async (code: string) => {
   const CLIENT_ID = process.env.INSTAGRAM_CLIENT_ID;
   const CLIENT_SECRET = process.env.INSTAGRAM_CLIENT_SECRET;
@@ -34,8 +38,8 @@ export const exchangeInstagramCode = async (code: string) => {
         client_id: CLIENT_ID,
         client_secret: CLIENT_SECRET,
         redirect_uri: REDIRECT_URI,
-        code,
-      },
+        code
+      }
     }
   );
 
@@ -46,6 +50,9 @@ export const exchangeInstagramCode = async (code: string) => {
   };
 };
 
+
+/* ------------------------------------------------ */
+/* STEP 2: SHORT TOKEN → LONG TOKEN (60 DAYS) */
 
 export const exchangeInstagramLongLivedToken = async (
   shortToken: string
@@ -60,8 +67,8 @@ export const exchangeInstagramLongLivedToken = async (
         grant_type: "fb_exchange_token",
         client_id: CLIENT_ID,
         client_secret: CLIENT_SECRET,
-        fb_exchange_token: shortToken,
-      },
+        fb_exchange_token: shortToken
+      }
     }
   );
 
@@ -73,27 +80,68 @@ export const exchangeInstagramLongLivedToken = async (
 };
 
 
+/* ------------------------------------------------ */
+/* STEP 3: GET INSTAGRAM BUSINESS ACCOUNT ID */
+
 export const fetchInstagramUserId = async (accessToken: string) => {
+
+  // get pages owned by the user
   const pages = await axios.get(
     "https://graph.facebook.com/v19.0/me/accounts",
     {
-      params: { access_token: accessToken },
+      params: {
+        access_token: accessToken
+      }
     }
   );
 
-  const pageId = pages.data.data?.[0]?.id;
+  if (!pages.data.data?.length) {
+    return null;
+  }
 
-  if (!pageId) return null;
+  // check each page for IG account
+  for (const page of pages.data.data) {
 
-  const igAccount = await axios.get(
-    `https://graph.facebook.com/v19.0/${pageId}`,
+    const pageDetails = await axios.get(
+      `https://graph.facebook.com/v19.0/${page.id}`,
+      {
+        params: {
+          fields: "instagram_business_account",
+          access_token: accessToken
+        }
+      }
+    );
+
+    const igId = pageDetails.data.instagram_business_account?.id;
+
+    if (igId) {
+      return igId;
+    }
+  }
+
+  return null;
+};
+
+
+/* ------------------------------------------------ */
+/* STEP 4: REFRESH LONG TOKEN */
+
+export const refreshInstagramLongToken = async (
+  longToken: string
+) => {
+  const response = await axios.get(
+    "https://graph.facebook.com/v19.0/oauth/access_token",
     {
       params: {
-        fields: "instagram_business_account",
-        access_token: accessToken,
-      },
+        grant_type: "ig_refresh_token",
+        access_token: longToken
+      }
     }
   );
 
-  return igAccount.data.instagram_business_account?.id ?? null;
+  return response.data as {
+    access_token: string;
+    token_type: string;
+    expires_in: number;
+  };
 };

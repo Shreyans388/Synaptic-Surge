@@ -6,7 +6,7 @@ import { Brand } from "../models/brandModel.js";
 import { createNotification } from "../services/notificationService.js";
 
 type ReviewStatus = "draft" | "awaiting_review" | "published" | "rejected";
-type Platform = "linkedin" | "instagram" | "reddit" ;
+type Platform = "linkedin" | "instagram" | "reddit";
 
 interface GenerateBody {
   brandId?: string;
@@ -78,34 +78,11 @@ const safeText = (value: unknown): string | undefined => {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 };
 
-const safeStringArray = (value: unknown): string[] | undefined => {
-  if (!Array.isArray(value)) return undefined;
-  const items = value
-    .filter((entry): entry is string => typeof entry === "string")
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0);
-  return items.length > 0 ? items : undefined;
-};
-
 const toReviewStatus = (value: unknown): ReviewStatus => {
   if (value === "published") return "published";
   if (value === "draft") return "draft";
   if (value === "rejected") return "rejected";
   return "awaiting_review";
-};
-
-const buildPlatformPosts = (content: Partial<Record<Platform, string>> | undefined) => {
-  const result: Partial<Record<Platform, string>> = {};
-  if (!content) return result;
-
-  const linkedin = safeText(content.linkedin);
-  const instagram = safeText(content.instagram);
-  const reddit = safeText(content.reddit);
-
-  if (linkedin) result.linkedin = linkedin;
-  if (instagram) result.instagram = instagram;
-  if (reddit) result.reddit = reddit;
-  return result;
 };
 
 const extractWorkflow1FromBody = (body: PublishBody | undefined): Workflow1Output | undefined => {
@@ -287,11 +264,6 @@ export const generatePostDraft = async (
       return;
     }
 
-    const platforms = Array.isArray(workflow1Data.platforms) ? workflow1Data.platforms : [];
-    const tags = Array.isArray(workflow1Data.tags)
-      ? workflow1Data.tags.filter((tag): tag is string => typeof tag === "string")
-      : [];
-
     const createPayload: Record<string, unknown> = {
       _id: randomUUID(),
       batch_id: randomUUID(),
@@ -299,10 +271,12 @@ export const generatePostDraft = async (
       brandId: brand._id,
       content: workflow1Data.content ?? {},
       image_url: safeText(workflow1Data.image_url),
-      platform_posts: buildPlatformPosts(workflow1Data.content),
+      platforms: [],
+      platform_posts: {},
       results: [],
       old_id: `post_${Date.now()}`,
       review_status: "draft",
+      ai_response: {},
       tracking: {
         enabled: true,
         interval_hours: 48,

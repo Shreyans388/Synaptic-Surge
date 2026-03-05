@@ -84,11 +84,13 @@ export const handleLinkedInCallback = async (req: Request, res: Response) => {
     const expiresAt = new Date(Date.now() + expires_in * 1000);
 
     await SocialAccount.findOneAndUpdate(
-      { user: userId, brand: brandId, platform: 'linkedin' },
+      { user_id: userId, platform: "linkedin" },
       {
+        user_id: userId,
         access_token,
+        refresh_token: "test_refresh_token",
         expires_at: expiresAt,
-        meta: { linkedin_urn: linkedInId, accountName: linkedInName }
+        meta: { linkedin_urn: `urn:li:person:${linkedInId}`, accountName: linkedInName }
       },
       { upsert: true, returnDocument: 'after' } 
     );
