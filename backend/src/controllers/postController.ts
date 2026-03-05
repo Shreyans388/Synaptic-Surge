@@ -20,6 +20,7 @@ interface GenerateBody {
   image_preference?: string;
   image_prompt?: string;
   reference_image_url?: string;
+  platforms?: Platform[];
 }
 
 interface PublishBody {
@@ -39,6 +40,19 @@ interface Workflow1Output {
   tags?: string[];
   platforms?: Platform[];
   scheduled_time?: string | null;
+}
+
+interface Workflow2PublishPayload {
+  user_id: string;
+  image_url: string;
+  content: Partial<Record<Platform, string>>;
+  title: {
+    default: string;
+    reddit: string;
+  };
+  tags: string[];
+  platforms: Platform[];
+  scheduled_time: string | null;
 }
 
 interface Workflow2Output {
@@ -67,6 +81,7 @@ interface Workflow1Input {
   image_preference: string;
   image_prompt: string;
   reference_image_url: string;
+  platforms?: Platform[];
 }
 
 const normalizeWebhookData = <T>(data: unknown): T => {
@@ -76,6 +91,61 @@ const normalizeWebhookData = <T>(data: unknown): T => {
 
 const safeText = (value: unknown): string | undefined => {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+};
+
+const parsePlatforms = (value: unknown): Platform[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+  const allowed: Platform[] = ["linkedin", "instagram", "reddit"];
+  const normalized = value.filter((item): item is Platform => {
+    return typeof item === "string" && allowed.includes(item as Platform);
+  });
+  if (normalized.length === 0) return undefined;
+  return Array.from(new Set(normalized));
+};
+
+const platformsFromContent = (
+  content: Partial<Record<Platform, string>> | undefined
+): Platform[] => {
+  if (!content || typeof content !== "object") return [];
+  return (["linkedin", "instagram", "reddit"] as const).filter((platform) => {
+    const text = content[platform];
+    return typeof text === "string" && text.trim().length > 0;
+  });
+};
+
+const getSuccessfulPlatformsFromWorkflow2 = (
+  payload: Workflow2Output | undefined
+): Platform[] => {
+  const successful = new Set<Platform>();
+  const allowed: Platform[] = ["linkedin", "instagram", "reddit"];
+
+  if (Array.isArray(payload?.results)) {
+    for (const result of payload.results) {
+      const platform = result?.platform;
+      const success = result?.success;
+      if (
+        typeof platform === "string" &&
+        allowed.includes(platform as Platform) &&
+        success === true
+      ) {
+        successful.add(platform as Platform);
+      }
+    }
+  }
+
+  if (payload?.platform_posts && typeof payload.platform_posts === "object") {
+    for (const [platform, postId] of Object.entries(payload.platform_posts)) {
+      if (
+        allowed.includes(platform as Platform) &&
+        typeof postId === "string" &&
+        postId.trim().length > 0
+      ) {
+        successful.add(platform as Platform);
+      }
+    }
+  }
+
+  return Array.from(successful);
 };
 
 const toReviewStatus = (value: unknown): ReviewStatus => {
@@ -228,6 +298,7 @@ export const generatePostDraft = async (
       return;
     }
     
+    const requestedPlatforms = parsePlatforms(req.body.platforms);
     const workflow1Payload: Workflow1Input = {
       userId: safeText(req.body.userId) ?? authUserId,
       userEmail: safeText(req.body.userEmail) ?? req.user!.email,
@@ -239,6 +310,7 @@ export const generatePostDraft = async (
       image_preference: safeText(req.body.image_preference) ?? "",
       image_prompt: safeText(req.body.image_prompt) ?? "",
       reference_image_url: safeText(req.body.reference_image_url) ?? "",
+      ...(requestedPlatforms ? { platforms: requestedPlatforms } : {}),
     };
 
     if (
@@ -264,6 +336,22 @@ export const generatePostDraft = async (
       return;
     }
 
+    const initialPlatformPosts: Partial<Record<Platform, string>> = {};
+    for (const [platform, text] of Object.entries(workflow1Data.content ?? {})) {
+      if (
+        (platform === "linkedin" || platform === "instagram" || platform === "reddit") &&
+        typeof text === "string" &&
+        text.trim().length > 0
+      ) {
+        initialPlatformPosts[platform] = text;
+      }
+    }
+
+    const resolvedPlatforms =
+      workflow1Data.platforms && workflow1Data.platforms.length > 0
+        ? workflow1Data.platforms
+        : requestedPlatforms ?? [];
+
     const createPayload: Record<string, unknown> = {
       _id: randomUUID(),
       batch_id: randomUUID(),
@@ -271,8 +359,8 @@ export const generatePostDraft = async (
       brandId: brand._id,
       content: workflow1Data.content ?? {},
       image_url: safeText(workflow1Data.image_url),
-      platforms: [],
-      platform_posts: {},
+      platforms: resolvedPlatforms,
+      platform_posts: initialPlatformPosts,
       results: [],
       old_id: `post_${Date.now()}`,
       review_status: "draft",
@@ -353,7 +441,18 @@ export const publishDraftPost = async (
       return;
     }
 
-    const workflow1Raw = workflow1FromBody ?? ({ content: post?.content } as Workflow1Output);
+    const workflow1Raw =
+      workflow1FromBody ??
+      ({
+        content: post?.content,
+        platforms: Array.isArray(post?.platforms)
+          ? post?.platforms.filter(
+              (platform): platform is Platform =>
+                platform === "linkedin" || platform === "instagram" || platform === "reddit"
+            )
+          : undefined,
+        image_url: safeText(post?.image_url),
+      } as Workflow1Output);
     const workflow1Data = (workflow1Raw ?? {}) as Workflow1Output;
     if (!workflow1Data.content) {
       res.status(400).json({
@@ -368,13 +467,69 @@ export const publishDraftPost = async (
       return;
     }
 
-    const publishPayload: Workflow1Output = {
-      ...workflow1Data,
-      ...(requestedSchedule ? { scheduled_time: requestedSchedule.toISOString() } : {}),
-    };
+    const resolvedContent: Partial<Record<Platform, string>> =
+      workflow1Data.content && typeof workflow1Data.content === "object"
+        ? workflow1Data.content
+        : {};
 
-    const workflow2Res = await axios.post(workflow2Url, publishPayload, { timeout: 120000 });
-    const workflow2Data = normalizeWebhookData<Workflow2Output>(workflow2Res.data);
+    const resolvedPlatforms =
+      parsePlatforms(workflow1Data.platforms) ??
+      parsePlatforms(post?.platforms) ??
+      platformsFromContent(resolvedContent);
+
+    const resolvedTags = Array.isArray(workflow1Data.tags)
+      ? workflow1Data.tags.filter(
+          (tag): tag is string => typeof tag === "string" && tag.trim().length > 0
+        )
+      : [];
+
+    const resolvedDefaultTitle =
+      safeText(workflow1Data.title?.default) ??
+      Object.values(resolvedContent).find(
+        (value): value is string => typeof value === "string" && value.trim().length > 0
+      )?.slice(0, 80) ??
+      "Untitled";
+    const resolvedRedditTitle =
+      safeText(workflow1Data.title?.reddit) ?? resolvedDefaultTitle;
+
+    const publishPayload: Workflow2PublishPayload = {
+      user_id: safeText(workflow1Data.user_id) ?? req.user!._id.toString(),
+      image_url: safeText(workflow1Data.image_url) ?? safeText(post?.image_url) ?? "",
+      content: resolvedContent,
+      title: {
+        default: resolvedDefaultTitle,
+        reddit: resolvedRedditTitle,
+      },
+      tags: resolvedTags,
+      platforms: resolvedPlatforms,
+      scheduled_time: requestedSchedule
+        ? requestedSchedule.toISOString()
+        : workflow1Data.scheduled_time ?? null,
+    };
+    console.log("Publish payload:", publishPayload);
+
+    let workflow2Data: Workflow2Output;
+    try {
+      const workflow2Res = await axios.post(workflow2Url, publishPayload, { timeout: 120000 });
+      workflow2Data = normalizeWebhookData<Workflow2Output>(workflow2Res.data);
+    } catch (publishError) {
+      if (!axios.isAxiosError(publishError)) {
+        throw publishError;
+      }
+
+      const fallbackData = normalizeWebhookData<Workflow2Output>(
+        publishError.response?.data
+      );
+      const successfulPlatforms = getSuccessfulPlatformsFromWorkflow2(fallbackData);
+
+      if (successfulPlatforms.length === 0) {
+        throw publishError;
+      }
+
+      // Some n8n executions return HTTP 400 even when one or more platforms publish successfully.
+      workflow2Data = fallbackData;
+    }
+    console.log("Workflow 2 output:", workflow2Data);
 
     if (!post) {
       res.status(200).json({
@@ -384,6 +539,8 @@ export const publishDraftPost = async (
     }
 
     const now = new Date();
+    const successfulPlatforms = getSuccessfulPlatformsFromWorkflow2(workflow2Data);
+    const hasSuccessfulPublish = successfulPlatforms.length > 0;
     const updated = await Post.findOneAndUpdate(
       { _id: postId, user_id: req.user!._id.toString() },
       {
@@ -403,8 +560,12 @@ export const publishDraftPost = async (
           ...(workflow2Data?.analytics ? { analytics: workflow2Data.analytics } : {}),
           ...(workflow2Data?.old_id ? { old_id: workflow2Data.old_id } : {}),
           ...(workflow2Data?.ai_response ? { ai_response: workflow2Data.ai_response } : {}),
-          review_status: "published",
-          published_at: now,
+          ...(hasSuccessfulPublish
+            ? {
+                review_status: "published",
+                published_at: now,
+              }
+            : {}),
         },
       },
       { new: true }
@@ -416,18 +577,25 @@ export const publishDraftPost = async (
     }
 
     const authUserId = req.user!._id.toString();
-    await createNotification({
-      userId: authUserId,
-      brandId: updated.brandId,
-      postId: updated._id,
-      type: "post_published",
-      title: "Post published",
-      message: `A post for brand "${updated.brandId}" was published successfully.`,
-      metadata: {
-        publishedAt: updated.published_at?.toISOString(),
-      },
-      eventKey: `post_published:${authUserId}:${updated._id}`,
-    });
+    if (hasSuccessfulPublish) {
+      const displayPlatforms = successfulPlatforms
+        .map((platform) => platform.charAt(0).toUpperCase() + platform.slice(1))
+        .join(", ");
+      await createNotification({
+        userId: authUserId,
+        brandId: updated.brandId,
+        postId: updated._id,
+        type: "post_published",
+        title: "Post published",
+        message: `Published successfully on ${displayPlatforms}.`,
+        metadata: {
+          publishedAt: updated.published_at?.toISOString(),
+          successfulPlatforms,
+          results: workflow2Data?.results,
+        },
+        eventKey: `post_published:${authUserId}:${updated._id}`,
+      });
+    }
 
     res.status(200).json({
       post: mapPostToFrontend(updated),

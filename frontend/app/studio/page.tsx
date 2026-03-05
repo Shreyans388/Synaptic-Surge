@@ -6,7 +6,13 @@ import { CalendarClock, Plus, Send, X } from "lucide-react";
 import { toast } from "sonner";
 import { useGlobalStore } from "@/state/global.store";
 import { useAuthStore } from "@/state/auth.store";
-import { generateDraftPost, getPosts, publishDraftPost } from "@/services/api/posts.api";
+import {
+  generateDraftPost,
+  getPosts,
+  publishDraftPost,
+  type Workflow1OutputPayload,
+  type Workflow2OutputPayload,
+} from "@/services/api/posts.api";
 import { getBrandConnections } from "@/services/api/brand.api";
 import { Post } from "@/types/domain.type";
 
@@ -17,6 +23,7 @@ interface FormState {
   tone: string;
   postDetails: string;
   context: string;
+  platforms: PublishPlatform[];
   imagePreference: "use_image" | "generate_new" | "use_reference" | "no_image";
   imagePrompt: string;
   referenceImageUrl: string;
@@ -27,15 +34,42 @@ const initialState: FormState = {
   tone: "Casual",
   postDetails: "",
   context: "",
+  platforms: ["linkedin", "instagram"],
   imagePreference: "use_reference",
   imagePrompt: "Nice Technical",
   referenceImageUrl: "",
+};
+
+const extractSuccessfulPublishPlatforms = (
+  workflow2: Workflow2OutputPayload | undefined
+): PublishPlatform[] => {
+  const successful = new Set<PublishPlatform>();
+
+  for (const result of workflow2?.results ?? []) {
+    if (
+      (result.platform === "linkedin" || result.platform === "instagram") &&
+      result.success === true
+    ) {
+      successful.add(result.platform);
+    }
+  }
+
+  const platformPosts = workflow2?.platform_posts ?? {};
+  for (const platform of ["linkedin", "instagram"] as const) {
+    const postId = platformPosts[platform];
+    if (typeof postId === "string" && postId.trim().length > 0) {
+      successful.add(platform);
+    }
+  }
+
+  return Array.from(successful);
 };
 
 export default function StudioPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const activeBrand = useGlobalStore((s) => s.activeBrand);
+  const addNotification = useGlobalStore((s) => s.addNotification);
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(initialState);
@@ -97,7 +131,8 @@ export default function StudioPage() {
     !!activeBrand &&
     form.topic.trim().length > 0 &&
     form.tone.trim().length > 0 &&
-    form.context.trim().length > 0;
+    form.context.trim().length > 0 &&
+    form.platforms.length > 0;
 
   const generateMutation = useMutation({
     mutationFn: async () => {
@@ -113,6 +148,7 @@ export default function StudioPage() {
         tone: form.tone.trim(),
         post_details: form.postDetails.trim(),
         context: form.context.trim(),
+        platforms: form.platforms,
         image_preference: form.imagePreference,
         image_prompt: form.imagePrompt.trim(),
         reference_image_url: form.referenceImageUrl.trim(),
@@ -142,15 +178,38 @@ export default function StudioPage() {
     mutationFn: async ({
       postId,
       scheduledAt,
+      workflow1Output,
     }: {
       postId: string;
       scheduledAt?: string;
+      workflow1Output?: Workflow1OutputPayload;
     }) => {
       const scheduledIso = scheduledAt ? new Date(scheduledAt).toISOString() : null;
-      return publishDraftPost(postId, scheduledIso);
+      return publishDraftPost(postId, scheduledIso, workflow1Output);
     },
-    onSuccess: () => {
+    onSuccess: (response, variables) => {
       queryClient.invalidateQueries({ queryKey: ["posts"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", activeBrand?._id] });
+
+      const successfulPlatforms = extractSuccessfulPublishPlatforms(response.workflow2);
+      if (successfulPlatforms.length > 0) {
+        const prettyPlatforms = successfulPlatforms
+          .map((platform) => platform.charAt(0).toUpperCase() + platform.slice(1))
+          .join(", ");
+        const message = `Post published on ${prettyPlatforms}.`;
+        toast.success(message);
+        addNotification({
+          id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${variables.postId}`,
+          message,
+          type: "success",
+        });
+        return;
+      }
+
+      toast.success("Publish request completed.");
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to publish post.");
     },
   });
 
@@ -259,12 +318,23 @@ export default function StudioPage() {
                     </label>
                     <button
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
+                        const selectedContent = post.platformDrafts
+                          .filter((draft) => selectedPlatforms.includes(draft.platform as PublishPlatform))
+                          .reduce<NonNullable<Workflow1OutputPayload["content"]>>((acc, draft) => {
+                            acc[draft.platform] = draft.content;
+                            return acc;
+                          }, {});
+
                         publishMutation.mutate({
                           postId: post.id,
                           scheduledAt: scheduleByPost[post.id],
-                        })
-                      }
+                          workflow1Output: {
+                            content: selectedContent,
+                            platforms: selectedPlatforms,
+                          },
+                        });
+                      }}
                       disabled={publishMutation.isPending || selectedPlatforms.length === 0}
                       className="self-end inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-70"
                     >
@@ -332,6 +402,35 @@ export default function StudioPage() {
                     <option value="no_image">no_image</option>
                   </select>
                 </label>
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-sm font-medium">Platforms</span>
+                <div className="flex flex-wrap gap-4">
+                  {(["linkedin", "instagram"] as const).map((platform) => (
+                    <label key={platform} className="inline-flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={form.platforms.includes(platform)}
+                        onChange={(e) =>
+                          setForm((prev) => {
+                            if (e.target.checked) {
+                              return {
+                                ...prev,
+                                platforms: Array.from(new Set([...prev.platforms, platform])),
+                              };
+                            }
+                            return {
+                              ...prev,
+                              platforms: prev.platforms.filter((item) => item !== platform),
+                            };
+                          })
+                        }
+                      />
+                      <span className="capitalize">{platform}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <label className="space-y-1 block">

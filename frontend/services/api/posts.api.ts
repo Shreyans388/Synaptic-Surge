@@ -13,16 +13,27 @@ export interface GenerateWorkflow1Payload {
   image_preference: string;
   image_prompt: string;
   reference_image_url: string;
+  platforms?: Array<"linkedin" | "instagram" | "reddit">;
 }
 
-interface CreateAndPublishResponse {
+export interface CreateAndPublishResponse {
   post: Post;
   workflow1: unknown;
 }
 
-interface PublishPostResponse {
+export interface Workflow2OutputPayload {
+  results?: Array<{
+    platform?: string;
+    success?: boolean;
+    [key: string]: unknown;
+  }>;
+  platform_posts?: Partial<Record<"linkedin" | "instagram" | "reddit", string | null>>;
+  [key: string]: unknown;
+}
+
+export interface PublishPostResponse {
   post?: Post;
-  workflow2: unknown;
+  workflow2: Workflow2OutputPayload;
 }
 
 export interface Workflow1OutputPayload {
