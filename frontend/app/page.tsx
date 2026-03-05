@@ -3,6 +3,7 @@ import { Bot, Gauge, Radar, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import Hero from "@/components/Hero";
 import AgentPreview from "@/components/AgentPreview";
+import { ReviewsMarquee } from "@/components/ReviewsMarquee";
 
 const features = [
   {
@@ -64,14 +65,23 @@ export default function LandingPage() {
       <Hero />
       <AgentPreview />
 
-      <section className="mx-auto mt-16 grid w-full max-w-7xl gap-4 px-6 md:grid-cols-3">
-        {stats.map((item) => (
-          <div key={item.label} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-            <p className="text-3xl font-extrabold text-[var(--foreground)]">{item.value}</p>
-            <p className="mt-2 text-sm text-[var(--muted-foreground)]">{item.label}</p>
-          </div>
-        ))}
-      </section>
+      <section className="mx-auto mt-16 w-full max-w-5xl px-6">
+  <div className="grid gap-4 md:grid-cols-3">
+    {stats.map((item) => (
+      <div
+        key={item.label}
+        className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 text-center"
+      >
+        <p className="text-2xl font-extrabold tracking-tight text-[var(--foreground)]">
+          {item.value}
+        </p>
+        <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+          {item.label}
+        </p>
+      </div>
+    ))}
+  </div>
+</section>
 
       <section className="mx-auto mt-16 w-full max-w-7xl px-6 pb-20">
         <div className="mb-12 flex flex-col items-center text-center">
@@ -102,6 +112,7 @@ export default function LandingPage() {
           ))}
         </div>
       </section>
+      <ReviewsMarquee />
     </main>
   );
 }
