@@ -2,7 +2,7 @@ import { Schema, model } from "mongoose";
 
 export interface IPost {
   _id: string;
-  batch_id: string;
+  batch_id: string | null;
   user_id: string;
   brandId: string;
   content: Record<string, unknown> | string;
@@ -17,6 +17,7 @@ export interface IPost {
     reddit?: string;
     twitter?: string;
   };
+
   review_status?: "draft" | "awaiting_review" | "published" | "rejected";
   published_at?: Date;
 
@@ -29,6 +30,7 @@ export interface IPost {
 
   status: "active" | "paused" | "deleted";
   version: number;
+
   analytics?: Record<string, unknown>;
   ai_response?: Record<string, unknown>;
 
@@ -45,7 +47,7 @@ const postSchema = new Schema<IPost>(
 
     batch_id: {
       type: String,
-      required: true,
+      default: null,
     },
 
     user_id: {
@@ -59,10 +61,12 @@ const postSchema = new Schema<IPost>(
       required: true,
       index: true,
     },
+
     content: {
       type: Schema.Types.Mixed,
       required: true,
     },
+
     platforms: {
       type: [String],
       default: [],
@@ -71,8 +75,16 @@ const postSchema = new Schema<IPost>(
     image_url: {
       type: String,
     },
-    results: [{ type: Schema.Types.Mixed }],
-    old_id: { type: String },
+
+    results: [
+      {
+        type: Schema.Types.Mixed,
+      },
+    ],
+
+    old_id: {
+      type: String,
+    },
 
     platform_posts: {
       linkedin: { type: String },
@@ -80,11 +92,13 @@ const postSchema = new Schema<IPost>(
       reddit: { type: String },
       twitter: { type: String },
     },
+
     review_status: {
       type: String,
       enum: ["draft", "awaiting_review", "published", "rejected"],
       default: "awaiting_review",
     },
+
     published_at: {
       type: Date,
     },
@@ -94,13 +108,16 @@ const postSchema = new Schema<IPost>(
         type: Boolean,
         default: true,
       },
+
       interval_hours: {
         type: Number,
         default: 48,
       },
+
       next_run_at: {
         type: Date,
       },
+
       expires_at: {
         type: Date,
       },
@@ -116,7 +133,11 @@ const postSchema = new Schema<IPost>(
       type: Number,
       default: 1,
     },
-    analytics: { type: Schema.Types.Mixed },
+
+    analytics: {
+      type: Schema.Types.Mixed,
+    },
+
     ai_response: {
       type: Schema.Types.Mixed,
       default: () => ({}),
@@ -127,10 +148,11 @@ const postSchema = new Schema<IPost>(
       createdAt: "created_at",
       updatedAt: "updated_at",
     },
+    minimize: false,
   }
 );
 
-// Performance indexes for AI tracking loop
+// Indexes for performance
 postSchema.index({ brandId: 1, created_at: -1 });
 postSchema.index({ batch_id: 1 });
 postSchema.index({ "tracking.next_run_at": 1 });
