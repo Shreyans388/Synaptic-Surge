@@ -1,8 +1,6 @@
 "use client";
 
-import { getBrands } from "@/services/api/brand.api";
-import { useGlobalStore } from "@/state/global.store";
-import { useQuery } from "@tanstack/react-query";
+import { useBrandStore } from "@/state/brand.store";
 import { usePathname } from "next/navigation";
 
 const TITLES: Record<string, string> = {
@@ -15,13 +13,10 @@ const TITLES: Record<string, string> = {
 
 export default function Topbar() {
   const pathname = usePathname();
-  const activeBrand = useGlobalStore((state) => state.activeBrand);
-  const setActiveBrand = useGlobalStore((state) => state.setActiveBrand);
 
-  const brandsQuery = useQuery({
-    queryKey: ["brands"],
-    queryFn: getBrands,
-  });
+  const brands = useBrandStore((state) => state.brands);
+  const activeBrand = useBrandStore((state) => state.activeBrand);
+  const setActiveBrand = useBrandStore((state) => state.setActiveBrand);
 
   return (
     <header className="sticky top-0 z-10 border-b border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_88%,transparent)] px-4 py-4 backdrop-blur-md md:px-6">
@@ -40,37 +35,32 @@ export default function Topbar() {
             <select
               value={activeBrand?._id ?? ""}
               onChange={(e) => {
-                const selected = brandsQuery.data?.find(
-                  (brand) => brand._id === e.target.value,
+                const selected = brands.find(
+                  (brand) => brand._id === e.target.value
                 );
                 if (selected) {
-                  setActiveBrand({
-                    _id: selected._id,
-                    name: selected.name,
-                  });
+                  setActiveBrand(selected._id);
                 }
               }}
               className="
-    bg-[var(--surface-elevated)]
-    text-[var(--foreground)]
-    border border-[var(--border)]
-    rounded-lg
-    px-2 py-1
-    outline-none
-    focus:ring-1 focus:ring-[var(--accent)]
-  "
+                bg-[var(--surface-elevated)]
+                text-[var(--foreground)]
+                border border-[var(--border)]
+                rounded-lg
+                px-2 py-1
+                outline-none
+                focus:ring-1 focus:ring-[var(--accent)]
+              "
             >
-              <option value="">
-                {brandsQuery.isLoading ? "Loading..." : "None"}
-              </option>
-              {(brandsQuery.data ?? []).map((brand) => (
+              <option value="">None</option>
+
+              {brands.map((brand) => (
                 <option key={brand._id} value={brand._id}>
                   {brand.name}
                 </option>
               ))}
             </select>
           </div>
-
         </div>
       </div>
     </header>

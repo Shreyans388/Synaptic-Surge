@@ -7,7 +7,7 @@ import { Linkedin, Instagram, Twitter, Plus, Pencil } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 // Stores
-import { useGlobalStore } from "@/state/global.store";
+
 import { useAuthStore } from "@/state/auth.store";
 
 // API Services
@@ -23,6 +23,7 @@ import {
   type SocialProvider,
 } from "@/services/api/brand.api";
 import SocialConnections from "@/components/SocialConnections";
+import { useBrandStore } from "@/state/brand.store";
 
 type LogoPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
 
@@ -42,8 +43,8 @@ export default function SettingsPage() {
   const searchParams = useSearchParams();
 
   // Global Store
-  const activeBrand = useGlobalStore((s) => s.activeBrand);
-  const setActiveBrand = useGlobalStore((s) => s.setActiveBrand);
+ const activeBrand = useBrandStore((s) => s.activeBrand);
+const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
 
   // Auth Store
   const user = useAuthStore((s) => s.user);
@@ -74,7 +75,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (activeBrand || !brandsQuery.data?.length) return;
     const first = brandsQuery.data[0];
-    setActiveBrand({ _id: first._id, name: first.name });
+    setActiveBrand(first._id);;
   }, [activeBrand, brandsQuery.data, setActiveBrand]);
 
   useEffect(() => {
@@ -99,7 +100,7 @@ export default function SettingsPage() {
     onSuccess: (brand: BrandRecord) => {
       setNewBrandName("");
       setIsAddBrandOpen(false);
-      setActiveBrand({ _id: brand._id, name: brand.name });
+      setActiveBrand(brand._id);
       queryClient.invalidateQueries({ queryKey: ["brands"] });
     },
   });
@@ -183,7 +184,7 @@ export default function SettingsPage() {
           {(brandsQuery.data ?? []).map((brand) => (
             <button
               key={brand._id}
-              onClick={() => setActiveBrand({ _id: brand._id, name: brand.name })}
+              onClick={() => setActiveBrand(brand._id)}
               className={`rounded-lg border px-3 py-2 text-sm transition ${
                 activeBrand?._id === brand._id
                   ? "border-sky-500 bg-sky-500/10 text-sky-700 dark:text-sky-300"

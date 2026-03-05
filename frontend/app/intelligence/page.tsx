@@ -2,13 +2,22 @@
 
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useGlobalStore } from "@/state/global.store";
+import { useBrandStore } from "@/state/brand.store";
 import { getPosts } from "@/services/api/posts.api";
 import { syncAnalyticsNotifications } from "@/services/api/notifications.api";
 import PostAnalyticsDashboard from "@/components/PostAnalyticsDashboard";
 
 export default function IntelligencePage() {
-  const activeBrand = useGlobalStore((s) => s.activeBrand);
+  const {
+    activeBrand,
+    fetchBrands,
+    isLoadingBrands,
+  } = useBrandStore();
+
+  // Ensure brands are loaded
+  useEffect(() => {
+    fetchBrands();
+  }, [fetchBrands]);
 
   const { data: posts = [] } = useQuery({
     queryKey: ["posts", activeBrand?._id],
@@ -18,16 +27,24 @@ export default function IntelligencePage() {
 
   useEffect(() => {
     if (!activeBrand?._id) return;
+
     syncAnalyticsNotifications(activeBrand._id).catch((error) => {
       console.error("Failed to sync analytics notifications:", error);
     });
   }, [activeBrand?._id]);
 
+  if (isLoadingBrands) {
+    return (
+      <div className="p-6">
+        <p className="text-sm text-[var(--muted)]">Loading intelligence data...</p>
+      </div>
+    );
+  }
+
   const engagementScore =
     posts.length > 0
       ? Math.round(
-          (posts.filter((p) => p.overallStatus === "published")
-            .length /
+          (posts.filter((p) => p.overallStatus === "published").length /
             posts.length) *
             100
         )
@@ -44,14 +61,14 @@ export default function IntelligencePage() {
           title="Engagement Score"
           value={`${engagementScore}%`}
         />
+
         <InsightCard
           title="Published Posts"
           value={
-            posts.filter(
-              (p) => p.overallStatus === "published"
-            ).length
+            posts.filter((p) => p.overallStatus === "published").length
           }
         />
+
         <InsightCard
           title="AI-Analyzed Posts"
           value={posts.filter((p) => !!p.aiResponse).length}

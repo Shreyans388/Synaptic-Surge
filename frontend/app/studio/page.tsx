@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, Plus, Send, X } from "lucide-react";
 import { toast } from "sonner";
-import { useGlobalStore } from "@/state/global.store";
+
 import { useAuthStore } from "@/state/auth.store";
 import {
   generateDraftPost,
@@ -15,6 +15,8 @@ import {
 } from "@/services/api/posts.api";
 import { getBrandConnections } from "@/services/api/brand.api";
 import { Post } from "@/types/domain.type";
+import { useBrandStore } from "@/state/brand.store";
+import { useGlobalStore } from "@/state/global.store";
 
 type PublishPlatform = "linkedin" | "instagram";
 
@@ -68,7 +70,7 @@ const extractSuccessfulPublishPlatforms = (
 export default function StudioPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
-  const activeBrand = useGlobalStore((s) => s.activeBrand);
+  const activeBrand = useBrandStore((s) => s.activeBrand);
   const addNotification = useGlobalStore((s) => s.addNotification);
 
   const [open, setOpen] = useState(false);
@@ -110,22 +112,30 @@ export default function StudioPage() {
   };
 
   useEffect(() => {
-    setSelectedPlatformsByPost((prev) => {
-      const next: Record<string, PublishPlatform[]> = {};
-      for (const post of draftPosts) {
-        const available = getAvailablePlatformsForPost(post);
-        if (available.length === 0) {
-          next[post.id] = [];
-          continue;
-        }
+  setSelectedPlatformsByPost((prev) => {
+    const next: Record<string, PublishPlatform[]> = {};
 
-        const existing = prev[post.id] ?? available;
-        const filtered = existing.filter((platform) => available.includes(platform));
-        next[post.id] = filtered.length > 0 ? filtered : available;
+    for (const post of draftPosts) {
+      const available = getAvailablePlatformsForPost(post);
+
+      if (available.length === 0) {
+        next[post.id] = [];
+        continue;
       }
-      return next;
-    });
-  }, [draftPosts, connectedPublishPlatforms]);
+
+      const existing = prev[post.id] ?? available;
+      const filtered = existing.filter((p) => available.includes(p));
+      next[post.id] = filtered.length > 0 ? filtered : available;
+    }
+
+    // prevent unnecessary state update
+    if (JSON.stringify(prev) === JSON.stringify(next)) {
+      return prev;
+    }
+
+    return next;
+  });
+}, [draftPosts, connectedPublishPlatforms]);
 
   const canSubmit =
     !!activeBrand &&

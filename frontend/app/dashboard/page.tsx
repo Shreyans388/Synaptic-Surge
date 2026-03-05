@@ -16,6 +16,7 @@ import {
 import PostAnalyticsDashboard from "@/components/PostAnalyticsDashboard";
 import CreateBrandForm from "@/components/CreateBrandForm";
 import SocialConnections from "@/components/SocialConnections";
+import Loading from "./loading";
 
 
 export default function DashboardPage() {
@@ -26,6 +27,7 @@ export default function DashboardPage() {
     createBrand,
     isCreatingBrand,
     setActiveBrand,
+    isLoadingBrands
   } = useBrandStore();
 
   const [showCreateBrand, setShowCreateBrand] = useState(false);
@@ -63,6 +65,7 @@ export default function DashboardPage() {
     setBrandName("");
     setBrandDescription("");
   };
+  if(isLoadingBrands)return <Loading/>
 
   if (!activeBrand && brands.length === 0 && !showCreateBrand) {
     return (

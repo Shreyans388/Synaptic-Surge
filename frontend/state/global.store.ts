@@ -18,7 +18,7 @@ interface GlobalState {
   theme: "light" | "dark";
   systemStatus: SystemStatus;
   notifications: Notification[];
-
+ 
   setTheme: (theme: "light" | "dark") => void;
   setActiveBrand: (brand: ActiveBrand | null) => void;
   setSystemStatus: (status: SystemStatus) => void;
@@ -33,7 +33,7 @@ export const useGlobalStore = create<GlobalState>((set) => ({
   theme: "light",
   systemStatus: "idle",
   notifications: [],
-
+  
   setTheme: (theme) => set({ theme }),
 
   setActiveBrand: (brand) => set({ activeBrand: brand }),
@@ -58,4 +58,5 @@ export const useGlobalStore = create<GlobalState>((set) => ({
       systemStatus: "idle",
       notifications: [],
     }),
+    
 }));
