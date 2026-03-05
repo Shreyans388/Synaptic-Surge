@@ -68,20 +68,26 @@ export default function LandingPage() {
         {stats.map((item) => (
           <div key={item.label} className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
             <p className="text-3xl font-extrabold text-[var(--foreground)]">{item.value}</p>
-            <p className="mt-2 text-sm text-[var(--muted)]">{item.label}</p>
+            <p className="mt-2 text-sm text-[var(--muted-foreground)]">{item.label}</p>
           </div>
         ))}
       </section>
 
       <section className="mx-auto mt-16 w-full max-w-7xl px-6 pb-20">
-        <div className="mb-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-600">Capabilities</p>
-          <h2 className="mt-2 text-3xl font-extrabold tracking-tight text-[var(--foreground)]">
-            Built for full-funnel content ops
-          </h2>
-        </div>
+        <div className="mb-12 flex flex-col items-center text-center">
+  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-500">
+    CAPABILITIES
+  </p>
 
-        <div className="grid gap-4 md:grid-cols-2">
+  <h2 className="mt-3 max-w-xl text-3xl font-extrabold tracking-tight 
+ text-[var(--foreground)]">
+    Built for full-funnel content ops
+  </h2>
+
+
+</div>
+
+        <div className="mt-6 grid gap-5 md:grid-cols-2">
           {features.map((feature) => (
             <article
               key={feature.title}
@@ -91,7 +97,7 @@ export default function LandingPage() {
                 <feature.icon size={18} />
               </div>
               <h3 className="text-lg font-bold text-[var(--foreground)]">{feature.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">{feature.description}</p>
+             <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">{feature.description}</p>
             </article>
           ))}
         </div>
