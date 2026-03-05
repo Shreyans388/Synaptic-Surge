@@ -6,7 +6,7 @@ import { Brand } from "../models/brandModel.js";
 import { createNotification } from "../services/notificationService.js";
 
 type ReviewStatus = "draft" | "awaiting_review" | "published" | "rejected";
-type Platform = "linkedin" | "instagram" | "reddit";
+type Platform = "linkedin" | "instagram" | "reddit" | "facebook";
 
 interface GenerateBody {
   brandId?: string;
@@ -95,7 +95,7 @@ const safeText = (value: unknown): string | undefined => {
 
 const parsePlatforms = (value: unknown): Platform[] | undefined => {
   if (!Array.isArray(value)) return undefined;
-  const allowed: Platform[] = ["linkedin", "instagram", "reddit"];
+  const allowed: Platform[] = ["linkedin", "instagram", "reddit", "facebook"];
   const normalized = value.filter((item): item is Platform => {
     return typeof item === "string" && allowed.includes(item as Platform);
   });
@@ -107,17 +107,39 @@ const platformsFromContent = (
   content: Partial<Record<Platform, string>> | undefined
 ): Platform[] => {
   if (!content || typeof content !== "object") return [];
-  return (["linkedin", "instagram", "reddit"] as const).filter((platform) => {
+  return (["linkedin", "instagram", "reddit", "facebook"] as const).filter((platform) => {
     const text = content[platform];
     return typeof text === "string" && text.trim().length > 0;
   });
+};
+
+const normalizePlatformPosts = (
+  value: unknown
+): Partial<Record<Platform, string | null>> | undefined => {
+  if (!value || typeof value !== "object") return undefined;
+  const input = value as Record<string, unknown>;
+  const keys: Platform[] = ["linkedin", "instagram", "reddit", "facebook"];
+  const output: Partial<Record<Platform, string | null>> = {};
+
+  for (const key of keys) {
+    const raw = input[key];
+    if (typeof raw === "string" && raw.trim().length > 0) {
+      output[key] = raw.trim();
+      continue;
+    }
+    if (raw === null) {
+      output[key] = null;
+    }
+  }
+
+  return Object.keys(output).length > 0 ? output : undefined;
 };
 
 const getSuccessfulPlatformsFromWorkflow2 = (
   payload: Workflow2Output | undefined
 ): Platform[] => {
   const successful = new Set<Platform>();
-  const allowed: Platform[] = ["linkedin", "instagram", "reddit"];
+  const allowed: Platform[] = ["linkedin", "instagram", "reddit", "facebook"];
 
   if (Array.isArray(payload?.results)) {
     for (const result of payload.results) {
@@ -133,8 +155,9 @@ const getSuccessfulPlatformsFromWorkflow2 = (
     }
   }
 
-  if (payload?.platform_posts && typeof payload.platform_posts === "object") {
-    for (const [platform, postId] of Object.entries(payload.platform_posts)) {
+  const normalizedPosts = normalizePlatformPosts(payload?.platform_posts);
+  if (normalizedPosts) {
+    for (const [platform, postId] of Object.entries(normalizedPosts)) {
       if (
         allowed.includes(platform as Platform) &&
         typeof postId === "string" &&
@@ -178,7 +201,7 @@ const mapPostToFrontend = (post: {
   _id: string | { toString(): string };
   brandId: string;
   content: Record<string, unknown> | string;
-  platform_posts?: Partial<Record<Platform, string>>;
+  platform_posts?: Partial<Record<Platform, string | null>>;
   review_status?: ReviewStatus;
   created_at: Date;
   published_at?: Date;
@@ -187,7 +210,7 @@ const mapPostToFrontend = (post: {
 }) => {
   const reviewStatus = toReviewStatus(post.review_status);
   const postId = typeof post._id === "string" ? post._id : post._id.toString();
-  const drafts = Object.entries(post.platform_posts ?? {})
+  const drafts = Object.entries(post.content ?? {})
     .filter(([platform]) => platform === "linkedin" || platform === "instagram" || platform === "reddit")
     .filter(([, text]) => typeof text === "string" && text.trim().length > 0)
     .map(([platform, text]) => ({
@@ -336,17 +359,6 @@ export const generatePostDraft = async (
       return;
     }
 
-    const initialPlatformPosts: Partial<Record<Platform, string>> = {};
-    for (const [platform, text] of Object.entries(workflow1Data.content ?? {})) {
-      if (
-        (platform === "linkedin" || platform === "instagram" || platform === "reddit") &&
-        typeof text === "string" &&
-        text.trim().length > 0
-      ) {
-        initialPlatformPosts[platform] = text;
-      }
-    }
-
     const resolvedPlatforms =
       workflow1Data.platforms && workflow1Data.platforms.length > 0
         ? workflow1Data.platforms
@@ -360,7 +372,7 @@ export const generatePostDraft = async (
       content: workflow1Data.content ?? {},
       image_url: safeText(workflow1Data.image_url),
       platforms: resolvedPlatforms,
-      platform_posts: initialPlatformPosts,
+      platform_posts: {},
       results: [],
       old_id: `post_${Date.now()}`,
       review_status: "draft",
@@ -549,8 +561,8 @@ export const publishDraftPost = async (
           ...(workflow2Data?.image_url ? { image_url: workflow2Data.image_url } : {}),
           ...(workflow2Data?.content ? { content: workflow2Data.content } : {}),
           ...(Array.isArray(workflow2Data?.results) ? { results: workflow2Data.results } : {}),
-          ...(workflow2Data?.platform_posts
-            ? { platform_posts: workflow2Data.platform_posts }
+          ...(normalizePlatformPosts(workflow2Data?.platform_posts)
+            ? { platform_posts: normalizePlatformPosts(workflow2Data?.platform_posts) }
             : {}),
           ...(workflow2Data?.status ? { status: workflow2Data.status } : {}),
           ...(typeof workflow2Data?.version === "number"

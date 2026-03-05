@@ -3,19 +3,26 @@ import { Schema, model } from "mongoose";
 export interface IPost {
   _id: string;
   batch_id: string | null;
-  user_id: string;
+  user_id: string | number;
   brandId: string;
-  content: Record<string, unknown> | string;
+  content: Partial<Record<"linkedin" | "instagram" | "reddit" | "facebook", string>>;
   platforms?: string[];
   image_url?: string;
-  results?: Array<Record<string, unknown>>;
+  results?: Array<{
+    platform?: string;
+    success?: boolean;
+    post_id?: string | null;
+    error?: string | null;
+    detailed_error?: string | null;
+    [key: string]: unknown;
+  }>;
   old_id?: string;
 
   platform_posts: {
     linkedin?: string;
     instagram?: string;
     reddit?: string;
-    twitter?: string;
+    facebook?: string | null;
   };
 
   review_status?: "draft" | "awaiting_review" | "published" | "rejected";
@@ -31,7 +38,10 @@ export interface IPost {
   status: "active" | "paused" | "deleted";
   version: number;
 
-  analytics?: Record<string, unknown>;
+  analytics?: {
+    last_checked?: Date;
+    history: Array<Record<string, unknown>>;
+  };
   ai_response?: Record<string, unknown>;
 
   created_at: Date;
@@ -51,7 +61,7 @@ const postSchema = new Schema<IPost>(
     },
 
     user_id: {
-      type: String,
+      type: Schema.Types.Mixed,
       required: true,
       index: true,
     },
@@ -64,7 +74,7 @@ const postSchema = new Schema<IPost>(
 
     content: {
       type: Schema.Types.Mixed,
-      required: true,
+      default: {},
     },
 
     platforms: {
@@ -78,7 +88,11 @@ const postSchema = new Schema<IPost>(
 
     results: [
       {
-        type: Schema.Types.Mixed,
+        platform: { type: String },
+        success: { type: Boolean },
+        post_id: { type: String, default: null },
+        error: { type: String, default: null },
+        detailed_error: { type: String, default: null },
       },
     ],
 
@@ -90,7 +104,7 @@ const postSchema = new Schema<IPost>(
       linkedin: { type: String },
       instagram: { type: String },
       reddit: { type: String },
-      twitter: { type: String },
+      facebook: { type: String, default: null },
     },
 
     review_status: {
@@ -135,7 +149,11 @@ const postSchema = new Schema<IPost>(
     },
 
     analytics: {
-      type: Schema.Types.Mixed,
+      last_checked: { type: Date },
+      history: {
+        type: [Schema.Types.Mixed],
+        default: [],
+      },
     },
 
     ai_response: {
