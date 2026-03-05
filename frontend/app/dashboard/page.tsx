@@ -11,7 +11,9 @@ import {
   CheckCircle,
   LayoutGrid,
   Plus,
+  X,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 import PostAnalyticsDashboard from "@/components/PostAnalyticsDashboard";
 import CreateBrandForm from "@/components/CreateBrandForm";
@@ -23,14 +25,9 @@ export default function DashboardPage() {
     activeBrand,
     brands,
     fetchBrands,
-    createBrand,
-    isCreatingBrand,
-    setActiveBrand,
   } = useBrandStore();
 
   const [showCreateBrand, setShowCreateBrand] = useState(false);
-  const [brandName, setBrandName] = useState("");
-  const [brandDescription, setBrandDescription] = useState("");
 
   useEffect(() => {
     fetchBrands();
@@ -50,20 +47,6 @@ export default function DashboardPage() {
     enabled: !!activeBrand?._id,
   });
 
-  const handleCreateBrand = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const newBrand = await createBrand({
-      name: brandName.trim(),
-      description: brandDescription.trim() || undefined,
-    });
-
-    setActiveBrand(newBrand._id);
-    setShowCreateBrand(false);
-    setBrandName("");
-    setBrandDescription("");
-  };
-
   if (!activeBrand && brands.length === 0 && !showCreateBrand) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
@@ -76,7 +59,7 @@ export default function DashboardPage() {
         </p>
         <button
           onClick={() => setShowCreateBrand(true)}
-          className="px-6 py-3 bg-sky-600 text-white rounded-xl font-semibold hover:bg-sky-700 transition"
+          className="ui-btn-primary px-6 py-3"
         >
           + Create Brand
         </button>
@@ -95,19 +78,32 @@ export default function DashboardPage() {
 
         <button
           onClick={() => setShowCreateBrand(!showCreateBrand)}
-          className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-xl font-bold hover:bg-sky-700 transition"
+          className="ui-btn-primary font-bold"
         >
           <Plus size={16} />
-          Create Brand
+          {showCreateBrand ? "Close" : "Create Brand"}
         </button>
       </div>
 
-      {/* BRAND FORM */}
-      {showCreateBrand && (
-        <CreateBrandForm
-          onSuccess={() => setShowCreateBrand(false)}
-        />
-      )}
+      {showCreateBrand ? (
+        <div className="ui-dialog-backdrop">
+          <div className="ui-dialog-panel max-w-2xl">
+            <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
+              <h3 className="text-lg font-semibold">Create Brand</h3>
+              <button
+                type="button"
+                onClick={() => setShowCreateBrand(false)}
+                className="ui-btn-secondary rounded-lg p-2"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="p-5">
+              <CreateBrandForm onSuccess={() => setShowCreateBrand(false)} onCancel={() => setShowCreateBrand(false)} />
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {/* ACTIVE BRAND CONTENT */}
       {activeBrand && (
@@ -152,7 +148,17 @@ export default function DashboardPage() {
   );
 }
 
-function MetricCard({ title, value, icon: Icon, color }: any) {
+function MetricCard({
+  title,
+  value,
+  icon: Icon,
+  color,
+}: {
+  title: string;
+  value: number;
+  icon: LucideIcon;
+  color: string;
+}) {
   return (
     <div className="p-6 rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0B0E14]">
       <div className="flex justify-between">

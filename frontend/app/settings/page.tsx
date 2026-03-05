@@ -51,7 +51,7 @@ export default function SettingsPage() {
 
   const [newBrandName, setNewBrandName] = useState("");
   const [isAddBrandOpen, setIsAddBrandOpen] = useState(false);
-  const [isBrandProfileOpen, setIsBrandProfileOpen] = useState(true);
+  const [isBrandProfileOpen, setIsBrandProfileOpen] = useState(false);
   const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
 
@@ -76,12 +76,6 @@ export default function SettingsPage() {
     const first = brandsQuery.data[0];
     setActiveBrand({ _id: first._id, name: first.name });
   }, [activeBrand, brandsQuery.data, setActiveBrand]);
-
-  useEffect(() => {
-    if (activeBrand?._id) {
-      setIsBrandProfileOpen(true);
-    }
-  }, [activeBrand?._id]);
 
   const selectedBrandRecord =
     activeBrand?._id && brandsQuery.data
@@ -173,10 +167,10 @@ export default function SettingsPage() {
     <div className="max-w-4xl space-y-8 p-6">
       <h1 className="text-2xl font-semibold">Settings</h1>
 
-      <section className="space-y-4 rounded-2xl border border-(--border) bg-(--surface) p-5">
+      <section className="ui-panel space-y-4 p-5">
         <div>
           <h2 className="text-lg font-semibold">Brands</h2>
-          <p className="text-sm text-(--muted)">Select the active brand used across dashboard, studio, and social connections.</p>
+          <p className="text-sm text-[var(--muted)]">Select the active brand used across dashboard, studio, and social connections.</p>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -186,8 +180,8 @@ export default function SettingsPage() {
               onClick={() => setActiveBrand({ _id: brand._id, name: brand.name })}
               className={`rounded-lg border px-3 py-2 text-sm transition ${
                 activeBrand?._id === brand._id
-                  ? "border-sky-500 bg-sky-500/10 text-sky-700 dark:text-sky-300"
-                  : "border-(--border) hover:border-(--border-strong)"
+                  ? "border-sky-500 bg-sky-500/10 text-sky-300"
+                  : "border-[var(--border)] bg-[var(--surface-elevated)] hover:border-sky-500/45"
               }`}
             >
               {brand.name}
@@ -199,7 +193,7 @@ export default function SettingsPage() {
           <button
             type="button"
             onClick={() => setIsAddBrandOpen(true)}
-            className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700"
+            className="ui-btn-primary"
           >
             <Plus size={16} /> Add Brand
           </button>
@@ -216,12 +210,12 @@ export default function SettingsPage() {
               value={newBrandName}
               onChange={(e) => setNewBrandName(e.target.value)}
               placeholder="Add a new brand"
-              className="flex-1 rounded-xl border border-(--border) bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+              className="ui-input flex-1"
             />
             <button
               type="submit"
               disabled={createBrandMutation.isPending}
-              className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-70"
+              className="ui-btn-primary"
             >
               <Plus size={16} /> Save
             </button>
@@ -231,7 +225,7 @@ export default function SettingsPage() {
                 setNewBrandName("");
                 setIsAddBrandOpen(false);
               }}
-              className="rounded-xl border border-(--border) px-4 py-2 text-sm font-medium hover:border-(--border-strong)"
+              className="ui-btn-secondary"
             >
               Cancel
             </button>
@@ -239,17 +233,17 @@ export default function SettingsPage() {
         )}
       </section>
 
-      <section className="space-y-4 rounded-2xl border border-(--border) bg-(--surface) p-5">
+      <section className="ui-panel space-y-4 p-5">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">Brand Profile</h2>
-            <p className="text-sm text-(--muted)">Save voice and creative metadata for this brand.</p>
+            <p className="text-sm text-[var(--muted)]">Save voice and creative metadata for this brand.</p>
           </div>
           {activeBrand && selectedBrandRecord ? (
             <button
               type="button"
               onClick={() => setIsBrandProfileOpen((prev) => !prev)}
-              className="inline-flex items-center gap-2 rounded-xl border border-(--border) px-3 py-2 text-sm font-medium hover:border-(--border-strong)"
+              className="ui-btn-secondary"
             >
               <Pencil size={14} />
               {isBrandProfileOpen ? "Close" : "Edit Profile"}
@@ -258,9 +252,9 @@ export default function SettingsPage() {
         </div>
 
         {!activeBrand || !selectedBrandRecord ? (
-          <p className="text-sm text-(--muted)">Create or select a brand first.</p>
+          <p className="text-sm text-[var(--muted)]">Create or select a brand first.</p>
         ) : !isBrandProfileOpen ? (
-          <p className="text-sm text-(--muted)">Brand profile is collapsed. Click "Edit Profile" to open it.</p>
+          <p className="text-sm text-[var(--muted)]">Brand profile is collapsed. Click Edit Profile to open it.</p>
         ) : (
           <form
             key={selectedBrandRecord._id}
@@ -276,36 +270,36 @@ export default function SettingsPage() {
                 name="brandColors"
                 defaultValue={(selectedBrandRecord.brandColors ?? []).join(", ")}
                 placeholder="Brand colors (comma separated)"
-                className="rounded-xl border border-(--border) bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                className="ui-input"
               />
               <input
                 name="brandStyle"
                 defaultValue={selectedBrandRecord.brandStyle ?? ""}
                 placeholder="Brand style"
-                className="rounded-xl border border-(--border) bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                className="ui-input"
               />
               <input
                 name="brandVoice"
                 defaultValue={selectedBrandRecord.brandVoice ?? ""}
                 placeholder="Brand voice"
-                className="rounded-xl border border-(--border) bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                className="ui-input"
               />
               <input
                 name="ctaStyle"
                 defaultValue={selectedBrandRecord.ctaStyle ?? ""}
                 placeholder="CTA style"
-                className="rounded-xl border border-(--border) bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                className="ui-input"
               />
               <input
                 name="logoUrl"
                 defaultValue={selectedBrandRecord.logoUrl ?? selectedBrandRecord.logo ?? ""}
                 placeholder="Logo URL"
-                className="rounded-xl border border-(--border) bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                className="ui-input"
               />
               <select
                 name="logoPosition"
                 defaultValue={(selectedBrandRecord.logoPosition as LogoPosition | undefined) ?? "top-right"}
-                className="rounded-xl border border-(--border) bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+                className="ui-select"
               >
                 <option value="top-left">Logo Top Left</option>
                 <option value="top-right">Logo Top Right</option>
@@ -320,7 +314,7 @@ export default function SettingsPage() {
               defaultValue={selectedBrandRecord.brandText ?? ""}
               placeholder="Brand text"
               rows={4}
-              className="w-full rounded-xl border border-(--border) bg-transparent px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-sky-500"
+              className="ui-input w-full"
             />
 
             {profileSaveError ? (
@@ -330,7 +324,7 @@ export default function SettingsPage() {
             <button
               type="submit"
               disabled={saveProfileMutation.isPending}
-              className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-700 disabled:opacity-70"
+              className="ui-btn-primary"
             >
               {saveProfileMutation.isPending ? "Saving..." : "Save Brand Profile"}
             </button>
@@ -338,10 +332,10 @@ export default function SettingsPage() {
         )}
       </section>
 
-     <section className="space-y-4 rounded-2xl border border-(--border) bg-(--surface) p-5">
+     <section className="ui-panel space-y-4 p-5">
   <div>
     <h2 className="text-lg font-semibold">Social Connections</h2>
-    <p className="text-sm text-(--muted)">
+    <p className="text-sm text-[var(--muted)]">
       Connect LinkedIn, Instagram, and Twitter for your active brand.
     </p>
   </div>
@@ -352,11 +346,11 @@ export default function SettingsPage() {
     oauthProvider={oauthProvider}
   />
 </section>
-      <section className="space-y-3 rounded-2xl border border-(--border) bg-(--surface) p-5">
+      <section className="ui-panel space-y-3 p-5">
         <h2 className="text-lg font-semibold">Account</h2>
         <button
           onClick={() => logoutMutation.mutate()}
-          className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          className="ui-btn-danger"
           disabled={logoutMutation.isPending}
         >
           {logoutMutation.isPending ? "Logging out..." : "Logout"}

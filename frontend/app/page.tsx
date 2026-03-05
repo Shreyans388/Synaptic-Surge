@@ -113,6 +113,61 @@ export default function LandingPage() {
         </div>
       </section>
       <ReviewsMarquee />
+
+      <footer className="mt-20 border-t border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_92%,black_8%)]">
+        <div className="mx-auto grid w-full max-w-7xl gap-10 px-6 py-12 md:grid-cols-4">
+          <div className="md:col-span-2">
+            <div className="flex items-center gap-2 text-xl font-black text-[var(--foreground)]">
+              <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500" />
+              LOOMIN
+            </div>
+            <p className="mt-3 max-w-md text-sm leading-relaxed text-[var(--muted-foreground)]">
+              Agentic content operations for brands that want faster execution with safer publishing workflows.
+            </p>
+            <div className="mt-5">
+              <Link href="/signup" className="ui-btn-primary">
+                Start Free
+              </Link>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Product</h3>
+            <div className="mt-3 space-y-2 text-sm">
+              <Link href="/login" className="block text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]">
+                Dashboard
+              </Link>
+              <Link href="/signup" className="block text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]">
+                Get Started
+              </Link>
+              <Link href="/intelligence" className="block text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]">
+                Intelligence
+              </Link>
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Company</h3>
+            <div className="mt-3 space-y-2 text-sm">
+              <a href="#" className="block text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]">
+                Privacy
+              </a>
+              <a href="#" className="block text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]">
+                Terms
+              </a>
+              <a href="#" className="block text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]">
+                Contact
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-[var(--border)] px-6 py-4">
+          <p className="mx-auto w-full max-w-7xl text-xs text-[var(--muted)]">
+            {new Date().getFullYear()} LOOMIN. All rights reserved.
+          </p>
+        </div>
+      </footer>
     </main>
   );
 }

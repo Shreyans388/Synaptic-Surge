@@ -50,15 +50,7 @@ export default function Topbar() {
                   });
                 }
               }}
-              className="
-    bg-[var(--surface-elevated)]
-    text-[var(--foreground)]
-    border border-[var(--border)]
-    rounded-lg
-    px-2 py-1
-    outline-none
-    focus:ring-1 focus:ring-[var(--accent)]
-  "
+              className="ui-select py-1.5 text-xs"
             >
               <option value="">
                 {brandsQuery.isLoading ? "Loading..." : "None"}
