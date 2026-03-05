@@ -1,9 +1,9 @@
 import type { Request, Response } from 'express';
 import axios from 'axios';
+import jwt from 'jsonwebtoken';
 import { SocialAccount } from '../models/socialAccountModel.js';
 
 export const getLinkedInOAuthUrl = (req: Request, res: Response) => {
-  // 1. Move these INSIDE the function so they are read dynamically!
   const CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;
   const REDIRECT_URI = process.env.LINKEDIN_REDIRECT_URI;
 
@@ -18,8 +18,18 @@ export const getLinkedInOAuthUrl = (req: Request, res: Response) => {
     return res.status(400).json({ message: "userId and brandId are required" });
   }
 
-  const stateObj = JSON.stringify({ userId, brandId });
-  const encodedState = Buffer.from(stateObj).toString('base64');
+  // Use JWT to encode the state so it matches your other OAuth flows
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    console.error("CRITICAL: JWT_SECRET is missing from backend .env!");
+    return res.status(500).json({ message: "Server environment missing JWT Secret" });
+  }
+
+  const encodedState = jwt.sign(
+    { userId, brandId, provider: "linkedin" },
+    secret,
+    { expiresIn: "10m" }
+  );
 
   const scope = 'openid profile email w_member_social'; 
   const authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&state=${encodedState}&scope=${encodeURIComponent(scope)}`;
@@ -28,7 +38,6 @@ export const getLinkedInOAuthUrl = (req: Request, res: Response) => {
 };
 
 export const handleLinkedInCallback = async (req: Request, res: Response) => {
-  // 2. Move these INSIDE the callback function too
   const CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;
   const CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET;
   const REDIRECT_URI = process.env.LINKEDIN_REDIRECT_URI;
@@ -42,7 +51,16 @@ export const handleLinkedInCallback = async (req: Request, res: Response) => {
   }
 
   try {
-    const decodedState = JSON.parse(Buffer.from(state as string, 'base64').toString('utf-8'));
+    const secret = process.env.JWT_SECRET;
+    if (!secret) throw new Error("JWT_SECRET not configured");
+
+    // FIX: Verify and decode the JWT state instead of Base64 JSON parsing
+    const decodedState = jwt.verify(state as string, secret) as { 
+      userId: string; 
+      brandId: string;
+      provider?: string;
+    };
+    
     const { userId, brandId } = decodedState;
 
     const tokenResponse = await axios.post('https://www.linkedin.com/oauth/v2/accessToken', new URLSearchParams({
