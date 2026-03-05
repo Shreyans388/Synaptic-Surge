@@ -5,13 +5,15 @@ import type { ComponentType } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Linkedin, Instagram, Twitter, Plus, Pencil } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-
-// Stores
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 import { useAuthStore } from "@/state/auth.store";
-
-// API Services
-import { logoutUser } from "@/services/api/auth.api";
 import {
   buildOauthConnectUrl,
   createBrand,
@@ -22,10 +24,17 @@ import {
   type BrandRecord,
   type SocialProvider,
 } from "@/services/api/brand.api";
+
 import SocialConnections from "@/components/SocialConnections";
 import { useBrandStore } from "@/state/brand.store";
+import { logoutUser } from "@/services/api/auth.api";
 
-type LogoPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
+type LogoPosition =
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right"
+  | "center";
 
 const PROVIDERS: Array<{
   key: SocialProvider;
@@ -42,11 +51,9 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
 
-  // Global Store
- const activeBrand = useBrandStore((s) => s.activeBrand);
-const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
+  const activeBrand = useBrandStore((s) => s.activeBrand);
+  const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
 
-  // Auth Store
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
 
@@ -56,10 +63,10 @@ const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
   const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
   const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
 
-  const oauthStatus = searchParams.get("status") || searchParams.get("linkedin_connected");
+  const oauthStatus =
+    searchParams.get("status") || searchParams.get("linkedin_connected");
   const oauthProvider = searchParams.get("oauth") || "linkedin";
 
-  // Queries
   const brandsQuery = useQuery({
     queryKey: ["brands"],
     queryFn: getBrands,
@@ -71,24 +78,21 @@ const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
     enabled: Boolean(activeBrand?._id),
   });
 
-  // Effects & Computed Data
   useEffect(() => {
     if (activeBrand || !brandsQuery.data?.length) return;
-    const first = brandsQuery.data[0];
-    setActiveBrand(first._id);;
+    setActiveBrand(brandsQuery.data[0]._id);
   }, [activeBrand, brandsQuery.data, setActiveBrand]);
 
   const selectedBrandRecord =
     activeBrand?._id && brandsQuery.data
-      ? brandsQuery.data.find((brand) => brand._id === activeBrand._id) ?? null
+      ? brandsQuery.data.find((b) => b._id === activeBrand._id) ?? null
       : null;
 
   const connectedPlatforms = useMemo(
-    () => new Set((connectionsQuery.data ?? []).map((item) => item.platform)),
+    () => new Set((connectionsQuery.data ?? []).map((c) => c.platform)),
     [connectionsQuery.data]
   );
 
-  // Mutations
   const createBrandMutation = useMutation({
     mutationFn: () => createBrand({ name: newBrandName.trim() }),
     onSuccess: (brand: BrandRecord) => {
@@ -106,7 +110,7 @@ const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
 
       const brandColors = String(formData.get("brandColors") ?? "")
         .split(",")
-        .map((item) => item.trim())
+        .map((i) => i.trim())
         .filter(Boolean);
 
       return updateBrand(brandId, {
@@ -128,16 +132,7 @@ const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
       alert("Profile saved successfully!");
     },
     onError: (error: Error) => {
-      setProfileSaveError(error.message || "Failed to save brand profile");
-    },
-  });
-
-  const disconnectMutation = useMutation({
-    mutationFn: ({ brandId, provider }: { brandId: string; provider: SocialProvider }) =>
-      disconnectPlatform(brandId, provider),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["brand-connections", activeBrand?._id] });
-      queryClient.invalidateQueries({ queryKey: ["brands"] });
+      setProfileSaveError(error.message);
     },
   });
 
@@ -149,7 +144,6 @@ const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
     },
   });
 
- // OAuth Connect Handler
   const handleOAuthConnect = async (providerKey: string) => {
     if (!activeBrand?._id) return alert("Please select a brand first.");
 
@@ -157,8 +151,7 @@ const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
       setConnectingProvider(providerKey);
       const url = buildOauthConnectUrl(providerKey as SocialProvider, activeBrand._id);
       window.location.assign(url);
-    } catch (error) {
-      console.error(`Failed to connect to ${providerKey}:`, error);
+    } catch {
       alert(`Could not initiate ${providerKey} connection.`);
       setConnectingProvider(null);
     }
@@ -168,10 +161,24 @@ const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
     <div className="max-w-4xl space-y-8 p-6">
       <h1 className="text-2xl font-semibold">Settings</h1>
 
+      {/* Brands */}
       <section className="ui-panel space-y-4 p-5">
-        <div>
-          <h2 className="text-lg font-semibold">Brands</h2>
-          <p className="text-sm text-[var(--muted)]">Select the active brand used across dashboard, studio, and social connections.</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Brands</h2>
+            <p className="text-sm text-[var(--muted)]">
+              Select the active brand used across dashboard, studio, and social connections.
+            </p>
+          </div>
+
+          {!isAddBrandOpen && (
+            <button
+              onClick={() => setIsAddBrandOpen(true)}
+              className="ui-btn-primary"
+            >
+              <Plus size={16} /> Add Brand
+            </button>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -190,22 +197,14 @@ const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
           ))}
         </div>
 
-        {!isAddBrandOpen ? (
-          <button
-            type="button"
-            onClick={() => setIsAddBrandOpen(true)}
-            className="ui-btn-primary"
-          >
-            <Plus size={16} /> Add Brand
-          </button>
-        ) : (
+        {isAddBrandOpen && (
           <form
             onSubmit={(e) => {
               e.preventDefault();
               if (!newBrandName.trim()) return;
               createBrandMutation.mutate();
             }}
-            className="flex gap-2"
+            className="flex gap-2 max-w-md"
           >
             <input
               value={newBrandName}
@@ -213,6 +212,7 @@ const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
               placeholder="Add a new brand"
               className="ui-input flex-1"
             />
+
             <button
               type="submit"
               disabled={createBrandMutation.isPending}
@@ -220,6 +220,7 @@ const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
             >
               <Plus size={16} /> Save
             </button>
+
             <button
               type="button"
               onClick={() => {
@@ -235,31 +236,31 @@ const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
       </section>
 
       <section className="ui-panel space-y-4 p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold">Brand Profile</h2>
-            <p className="text-sm text-[var(--muted)]">Save voice and creative metadata for this brand.</p>
-          </div>
-          {activeBrand && selectedBrandRecord ? (
-            <button
-              type="button"
-              onClick={() => setIsBrandProfileOpen((prev) => !prev)}
-              className="ui-btn-secondary"
-            >
-              <Pencil size={14} />
-              {isBrandProfileOpen ? "Close" : "Edit Profile"}
-            </button>
-          ) : null}
-        </div>
+  <div className="flex items-start justify-between">
+    <div>
+      <h2 className="text-lg font-semibold">Brand Profile</h2>
+      <p className="text-sm text-[var(--muted)]">
+        Save voice and creative metadata for this brand.
+      </p>
+    </div>
 
-        {!activeBrand || !selectedBrandRecord ? (
-          <p className="text-sm text-[var(--muted)]">Create or select a brand first.</p>
-        ) : !isBrandProfileOpen ? (
-          <p className="text-sm text-[var(--muted)]">Brand profile is collapsed. Click Edit Profile to open it.</p>
-        ) : (
+    {activeBrand && selectedBrandRecord && (
+      <Dialog>
+        <DialogTrigger asChild>
+          <button className="ui-btn-secondary">
+            <Pencil size={14} />
+            Edit Profile
+          </button>
+        </DialogTrigger>
+
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Edit Brand Profile</DialogTitle>
+          </DialogHeader>
+
           <form
             key={selectedBrandRecord._id}
-            className="space-y-3"
+            className="space-y-4"
             onSubmit={(e) => {
               e.preventDefault();
               setProfileSaveError(null);
@@ -273,33 +274,45 @@ const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
                 placeholder="Brand colors (comma separated)"
                 className="ui-input"
               />
+
               <input
                 name="brandStyle"
                 defaultValue={selectedBrandRecord.brandStyle ?? ""}
                 placeholder="Brand style"
                 className="ui-input"
               />
+
               <input
                 name="brandVoice"
                 defaultValue={selectedBrandRecord.brandVoice ?? ""}
                 placeholder="Brand voice"
                 className="ui-input"
               />
+
               <input
                 name="ctaStyle"
                 defaultValue={selectedBrandRecord.ctaStyle ?? ""}
                 placeholder="CTA style"
                 className="ui-input"
               />
+
               <input
                 name="logoUrl"
-                defaultValue={selectedBrandRecord.logoUrl ?? selectedBrandRecord.logo ?? ""}
+                defaultValue={
+                  selectedBrandRecord.logoUrl ??
+                  selectedBrandRecord.logo ??
+                  ""
+                }
                 placeholder="Logo URL"
                 className="ui-input"
               />
+
               <select
                 name="logoPosition"
-                defaultValue={(selectedBrandRecord.logoPosition as LogoPosition | undefined) ?? "top-right"}
+                defaultValue={
+                  (selectedBrandRecord.logoPosition as LogoPosition) ??
+                  "top-right"
+                }
                 className="ui-select"
               >
                 <option value="top-left">Logo Top Left</option>
@@ -318,37 +331,51 @@ const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
               className="ui-input w-full"
             />
 
-            {profileSaveError ? (
+            {profileSaveError && (
               <p className="text-sm text-red-400">{profileSaveError}</p>
-            ) : null}
+            )}
 
-            <button
-              type="submit"
-              disabled={saveProfileMutation.isPending}
-              className="ui-btn-primary"
-            >
-              {saveProfileMutation.isPending ? "Saving..." : "Save Brand Profile"}
-            </button>
+            <div className="flex justify-end gap-2">
+              <button
+                type="submit"
+                disabled={saveProfileMutation.isPending}
+                className="ui-btn-primary"
+              >
+                {saveProfileMutation.isPending
+                  ? "Saving..."
+                  : "Save Profile"}
+              </button>
+            </div>
           </form>
-        )}
-      </section>
-
-     <section className="ui-panel space-y-4 p-5">
-  <div>
-    <h2 className="text-lg font-semibold">Social Connections</h2>
-    <p className="text-sm text-[var(--muted)]">
-      Connect LinkedIn, Instagram, and Twitter for your active brand.
-    </p>
+        </DialogContent>
+      </Dialog>
+    )}
   </div>
 
-  <SocialConnections
-    brandId={activeBrand?._id}
-    oauthStatus={oauthStatus}
-    oauthProvider={oauthProvider}
-  />
+  <p className="text-sm text-[var(--muted)]">
+    Edit profile to configure brand voice, colors, and logo metadata.
+  </p>
 </section>
+      {/* Social Connections */}
+      <section className="ui-panel space-y-4 p-5">
+        <div>
+          <h2 className="text-lg font-semibold">Social Connections</h2>
+          <p className="text-sm text-[var(--muted)]">
+            Connect LinkedIn, Instagram, and Twitter for your active brand.
+          </p>
+        </div>
+
+        <SocialConnections
+          brandId={activeBrand?._id}
+          oauthStatus={oauthStatus}
+          oauthProvider={oauthProvider}
+        />
+      </section>
+
+      {/* Account */}
       <section className="ui-panel space-y-3 p-5">
         <h2 className="text-lg font-semibold">Account</h2>
+
         <button
           onClick={() => logoutMutation.mutate()}
           className="ui-btn-danger"

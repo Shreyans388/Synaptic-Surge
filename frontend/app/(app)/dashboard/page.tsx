@@ -18,21 +18,25 @@ import CreateBrandForm from "@/components/CreateBrandForm";
 import SocialConnections from "@/components/SocialConnections";
 import Loading from "./loading";
 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+
 
 export default function DashboardPage() {
   const {
     activeBrand,
     brands,
     fetchBrands,
-    createBrand,
-    isCreatingBrand,
     setActiveBrand,
     isLoadingBrands
   } = useBrandStore();
 
-  const [showCreateBrand, setShowCreateBrand] = useState(false);
-  const [brandName, setBrandName] = useState("");
-  const [brandDescription, setBrandDescription] = useState("");
+  const [openCreateBrand, setOpenCreateBrand] = useState(false);
 
   useEffect(() => {
     fetchBrands();
@@ -52,37 +56,36 @@ export default function DashboardPage() {
     enabled: !!activeBrand?._id,
   });
 
-  const handleCreateBrand = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    const newBrand = await createBrand({
-      name: brandName.trim(),
-      description: brandDescription.trim() || undefined,
-    });
-
-    setActiveBrand(newBrand._id);
-    setShowCreateBrand(false);
-    setBrandName("");
-    setBrandDescription("");
-  };
-  if(isLoadingBrands)return <Loading />
-
-  if (!activeBrand && brands.length === 0 && !showCreateBrand) {
+  if (!activeBrand && brands.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-6">
         <LayoutGrid className="w-14 h-14 text-gray-400" />
+
         <h2 className="text-xl font-bold dark:text-white">
           No brands yet
         </h2>
+
         <p className="text-gray-500">
           Create your first brand to activate your AI agents.
         </p>
-        <button
-          onClick={() => setShowCreateBrand(true)}
-          className="px-6 py-3 bg-sky-600 text-white rounded-xl font-semibold hover:bg-sky-700 transition"
-        >
-          + Create Brand
-        </button>
+
+        <Dialog open={openCreateBrand} onOpenChange={setOpenCreateBrand}>
+          <DialogTrigger asChild>
+            <button className="px-6 py-3 bg-sky-600 text-white rounded-xl font-semibold hover:bg-sky-700 transition">
+              + Add Brand
+            </button>
+          </DialogTrigger>
+
+          <DialogContent className="sm:max-w-xl">
+            <DialogHeader>
+              <DialogTitle>Add Brand</DialogTitle>
+            </DialogHeader>
+
+            <CreateBrandForm
+              onSuccess={() => setOpenCreateBrand(false)}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -96,32 +99,37 @@ export default function DashboardPage() {
           Agent Command
         </h1>
 
-        <button
-          onClick={() => setShowCreateBrand(!showCreateBrand)}
-          className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-xl font-bold hover:bg-sky-700 transition"
-        >
-          <Plus size={16} />
-          Create Brand
-        </button>
-      </div>
+        <Dialog open={openCreateBrand} onOpenChange={setOpenCreateBrand}>
+          <DialogTrigger asChild>
+            <button className="flex items-center gap-2 px-4 py-2 bg-sky-600 text-white rounded-xl font-bold hover:bg-sky-700 transition">
+              <Plus size={16} />
+              Add Brand
+            </button>
+          </DialogTrigger>
 
-      {/* BRAND FORM */}
-      {showCreateBrand && (
-        <CreateBrandForm
-          onSuccess={() => setShowCreateBrand(false)}
-        />
-      )}
+          <DialogContent className="sm:max-w-xl">
+            <DialogHeader>
+              <DialogTitle>Add Brand</DialogTitle>
+            </DialogHeader>
+
+            <CreateBrandForm
+              onSuccess={() => setOpenCreateBrand(false)}
+            />
+          </DialogContent>
+        </Dialog>
+      </div>
 
       {/* ACTIVE BRAND CONTENT */}
       {activeBrand && (
         <>
-          {/* SOCIAL CONNECTIONS (ONLY IF NONE CONNECTED) */}
+          {/* SOCIAL CONNECTIONS */}
           {connections.length === 0 && (
             <div className="rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0B0E14] p-6">
               <div className="mb-4">
                 <h2 className="text-lg font-bold dark:text-white">
                   Connect your social platforms
                 </h2>
+
                 <p className="text-sm text-gray-500">
                   Connect LinkedIn, Instagram, or Twitter to start publishing content.
                 </p>
@@ -139,6 +147,7 @@ export default function DashboardPage() {
               icon={Rocket}
               color="text-blue-500"
             />
+
             <MetricCard
               title="Deploys"
               value={posts.filter(p => p.overallStatus === "published").length}
@@ -163,6 +172,7 @@ function MetricCard({ title, value, icon: Icon, color }: any) {
           <p className="text-xs uppercase tracking-widest text-gray-400">
             {title}
           </p>
+
           <h3 className="text-3xl font-black dark:text-white">
             {value}
           </h3>

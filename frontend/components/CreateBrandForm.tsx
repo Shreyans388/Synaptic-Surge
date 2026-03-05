@@ -65,9 +65,7 @@ export default function CreateBrandForm({
       onSubmit={handleSubmit}
       className="space-y-4"
     >
-      <h2 className="text-xl font-semibold">
-        Create Brand
-      </h2>
+      
 
       <div className="grid gap-3 md:grid-cols-2">
         <input

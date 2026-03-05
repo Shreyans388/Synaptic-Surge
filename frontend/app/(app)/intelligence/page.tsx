@@ -6,6 +6,8 @@ import { useBrandStore } from "@/state/brand.store";
 import { getPosts } from "@/services/api/posts.api";
 import { syncAnalyticsNotifications } from "@/services/api/notifications.api";
 import PostAnalyticsDashboard from "@/components/PostAnalyticsDashboard";
+import { LucideIcon } from "lucide-react";
+import { Gauge, Send, Brain } from "lucide-react";
 
 export default function IntelligencePage() {
   const {
@@ -33,13 +35,7 @@ export default function IntelligencePage() {
     });
   }, [activeBrand?._id]);
 
-  if (isLoadingBrands) {
-    return (
-      <div className="p-6">
-        <p className="text-sm text-[var(--muted)]">Loading intelligence data...</p>
-      </div>
-    );
-  }
+  
 
   const engagementScore =
     posts.length > 0
@@ -56,24 +52,27 @@ export default function IntelligencePage() {
         Intelligence Center
       </h1>
 
-      <div className="grid md:grid-cols-3 gap-4">
-        <InsightCard
-          title="Engagement Score"
-          value={`${engagementScore}%`}
-        />
+     <div className="grid md:grid-cols-3 gap-4">
+  <InsightCard
+    title="Engagement Score"
+    value={`${engagementScore}%`}
+    icon={Gauge}
+  />
 
-        <InsightCard
-          title="Published Posts"
-          value={
-            posts.filter((p) => p.overallStatus === "published").length
-          }
-        />
+  <InsightCard
+    title="Published Posts"
+    value={
+      posts.filter((p) => p.overallStatus === "published").length
+    }
+    icon={Send}
+  />
 
-        <InsightCard
-          title="AI-Analyzed Posts"
-          value={posts.filter((p) => !!p.aiResponse).length}
-        />
-      </div>
+  <InsightCard
+    title="AI-Analyzed Posts"
+    value={posts.filter((p) => !!p.aiResponse).length}
+    icon={Brain}
+  />
+</div>
 
       <PostAnalyticsDashboard posts={posts} />
     </div>
@@ -83,14 +82,22 @@ export default function IntelligencePage() {
 function InsightCard({
   title,
   value,
+  icon: Icon,
 }: {
   title: string;
   value: string | number;
+  icon: LucideIcon;
 }) {
   return (
-    <div className="p-4 border rounded-xl bg-[var(--surface)]">
-      <p className="text-sm text-[var(--muted)]">{title}</p>
-      <h2 className="text-xl font-semibold">{value}</h2>
+    <div className="flex items-center justify-between p-4 border rounded-xl bg-[var(--surface)]">
+      <div>
+        <p className="text-sm text-[var(--muted)]">{title}</p>
+        <h2 className="text-xl font-semibold">{value}</h2>
+      </div>
+
+      <div className="p-2 rounded-lg bg-white/5 border border-white/5">
+        <Icon size={20} className="opacity-80" />
+      </div>
     </div>
   );
 }

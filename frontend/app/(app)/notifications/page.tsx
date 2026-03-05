@@ -9,6 +9,7 @@ import {
 } from "@/services/api/notifications.api";
 import { useBrandStore } from "@/state/brand.store";
 
+
 const typeLabel: Record<NotificationRecord["type"], string> = {
   post_generated: "Post Generated",
   post_published: "Post Published",
@@ -47,16 +48,7 @@ export default function NotificationsPage() {
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="mx-auto max-w-5xl p-6">
-        <section className="ui-panel p-6">
-          <p className="text-sm text-[var(--muted)]">Loading notifications...</p>
-        </section>
-      </div>
-    );
-  }
-
+ 
   return (
     <div className="mx-auto max-w-5xl space-y-5 p-6">
       <section className="ui-panel p-5">
