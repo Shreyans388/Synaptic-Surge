@@ -31,7 +31,7 @@ export default function Topbar() {
             Workspace
           </p>
           <h2 className="text-lg font-semibold">
-            {TITLES[pathname] ?? "LOOMIN"}
+            {TITLES[pathname] ?? "LOOMIN AI"}
           </h2>
         </div>
 

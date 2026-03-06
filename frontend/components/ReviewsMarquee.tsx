@@ -7,7 +7,7 @@ const reviews = [
   {
     name: "Sarah Chen",
     username: "Growth Lead @SaaSFlow",
-    body: "Loomin feels like having a content strategist running 24/7. It spots trends before our team even notices them.",
+    body: "Loomin AI feels like having a content strategist running 24/7. It spots trends before our team even notices them.",
     img: "https://avatar.vercel.sh/sarah",
   },
   {
@@ -31,7 +31,7 @@ const reviews = [
   {
     name: "Michael Park",
     username: "Marketing @CloudForge",
-    body: "The sentiment monitoring is wild. Loomin suggested edits to posts that were getting negative comments.",
+    body: "The sentiment monitoring is wild. Loomin AI suggested edits to posts that were getting negative comments.",
     img: "https://avatar.vercel.sh/michael",
   },
   {
@@ -96,7 +96,7 @@ export function ReviewsMarquee() {
         </p>
 
         <h2 className="mt-3 text-3xl font-extrabold text-[var(--foreground)]">
-          Marketers love working with Loomin
+          Marketers love working with Loomin AI
         </h2>
       </div>
 

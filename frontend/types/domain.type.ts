@@ -9,6 +9,7 @@ export type Platform = "linkedin" | "instagram" | "reddit";
 export interface Draft {
   platform: Platform;
   content: string;
+  imageUrl?: string;
   hashtags: string[];
   version: number;
   status: PostStatus;
@@ -19,6 +20,7 @@ export interface Draft {
 export interface Post {
   id: string;
   brandId: string;
+  imageUrl?: string;
   masterBrief: {
     topic: string;
     goal: string;

@@ -24,9 +24,12 @@ export default function Sidebar() {
   return (
     <aside className="sticky top-0 hidden h-screen w-72 border-r border-[var(--border)] bg-[var(--surface)] px-4 py-5 lg:block">
       <div className="mb-8 rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-          LOOMIN
-        </p>
+        <Link
+          href="/"
+          className="inline-block text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted)] hover:text-[var(--foreground)]"
+        >
+          LOOMIN AI
+        </Link>
         <h1 className="mt-2 text-xl font-semibold">Operations Hub</h1>
       </div>
 

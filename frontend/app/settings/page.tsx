@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { ComponentType } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Linkedin, Instagram, Twitter, Plus, Pencil } from "lucide-react";
+import { Plus, Pencil } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 // Stores
@@ -13,28 +12,15 @@ import { useAuthStore } from "@/state/auth.store";
 // API Services
 import { logoutUser } from "@/services/api/auth.api";
 import {
-  buildOauthConnectUrl,
   createBrand,
-  disconnectPlatform,
   getBrandConnections,
   getBrands,
   updateBrand,
   type BrandRecord,
-  type SocialProvider,
 } from "@/services/api/brand.api";
 import SocialConnections from "@/components/SocialConnections";
 
 type LogoPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
-
-const PROVIDERS: Array<{
-  key: SocialProvider;
-  label: string;
-  icon: ComponentType<{ size?: number; className?: string }>;
-}> = [
-  { key: "linkedin", label: "LinkedIn", icon: Linkedin },
-  { key: "instagram", label: "Instagram", icon: Instagram },
-  { key: "twitter", label: "Twitter / X", icon: Twitter },
-];
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -53,7 +39,6 @@ export default function SettingsPage() {
   const [isAddBrandOpen, setIsAddBrandOpen] = useState(false);
   const [isBrandProfileOpen, setIsBrandProfileOpen] = useState(false);
   const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
-  const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
 
   const oauthStatus = searchParams.get("status") || searchParams.get("linkedin_connected");
   const oauthProvider = searchParams.get("oauth") || "linkedin";
@@ -86,6 +71,15 @@ export default function SettingsPage() {
     () => new Set((connectionsQuery.data ?? []).map((item) => item.platform)),
     [connectionsQuery.data]
   );
+  const userInitials = useMemo(() => {
+    const name = user?.fullName?.trim();
+    if (!name) return "U";
+    const parts = name.split(/\s+/).filter(Boolean);
+    return parts
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("");
+  }, [user?.fullName]);
 
   // Mutations
   const createBrandMutation = useMutation({
@@ -131,15 +125,6 @@ export default function SettingsPage() {
     },
   });
 
-  const disconnectMutation = useMutation({
-    mutationFn: ({ brandId, provider }: { brandId: string; provider: SocialProvider }) =>
-      disconnectPlatform(brandId, provider),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["brand-connections", activeBrand?._id] });
-      queryClient.invalidateQueries({ queryKey: ["brands"] });
-    },
-  });
-
   const logoutMutation = useMutation({
     mutationFn: logoutUser,
     onSettled: () => {
@@ -148,24 +133,40 @@ export default function SettingsPage() {
     },
   });
 
- // OAuth Connect Handler
-  const handleOAuthConnect = async (providerKey: string) => {
-    if (!activeBrand?._id) return alert("Please select a brand first.");
-
-    try {
-      setConnectingProvider(providerKey);
-      const url = buildOauthConnectUrl(providerKey as SocialProvider, activeBrand._id);
-      window.location.assign(url);
-    } catch (error) {
-      console.error(`Failed to connect to ${providerKey}:`, error);
-      alert(`Could not initiate ${providerKey} connection.`);
-      setConnectingProvider(null);
-    }
-  };
-
   return (
     <div className="max-w-4xl space-y-8 p-6">
       <h1 className="text-2xl font-semibold">Settings</h1>
+
+      <section className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-slate-900 via-slate-900 to-sky-950 p-5 text-white">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-sky-500/20 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-12 left-14 h-28 w-28 rounded-full bg-cyan-300/20 blur-2xl" />
+        <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-lg font-semibold tracking-wide">
+              {userInitials}
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-[0.18em] text-sky-200/90">User Profile</p>
+              <h2 className="text-xl font-semibold leading-tight">{user?.fullName ?? "Your account"}</h2>
+              <p className="text-sm text-slate-200">{user?.email ?? "No email available"}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="rounded-xl border border-white/15 bg-white/5 px-4 py-3">
+              <p className="text-lg font-semibold">{brandsQuery.data?.length ?? 0}</p>
+              <p className="text-xs text-slate-300">Brands</p>
+            </div>
+            <div className="rounded-xl border border-white/15 bg-white/5 px-4 py-3">
+              <p className="text-lg font-semibold">{connectedPlatforms.size}</p>
+              <p className="text-xs text-slate-300">Connected</p>
+            </div>
+            <div className="rounded-xl border border-white/15 bg-white/5 px-4 py-3">
+              <p className="truncate text-sm font-medium">{activeBrand?.name ?? "None"}</p>
+              <p className="text-xs text-slate-300">Active Brand</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section className="ui-panel space-y-4 p-5">
         <div>

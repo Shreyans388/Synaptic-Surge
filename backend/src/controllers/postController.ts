@@ -4,6 +4,7 @@ import { randomUUID } from "crypto";
 import { Post } from "../models/postModel.js";
 import { Brand } from "../models/brandModel.js";
 import { createNotification } from "../services/notificationService.js";
+import { persistImageUrl } from "../lib/cloudinary.js";
 
 type ReviewStatus = "draft" | "awaiting_review" | "published" | "rejected";
 type Platform = "linkedin" | "instagram" | "reddit" | "facebook";
@@ -201,6 +202,7 @@ const mapPostToFrontend = (post: {
   _id: string | { toString(): string };
   brandId: string;
   content: Record<string, unknown> | string;
+  image_url?: string;
   platform_posts?: Partial<Record<Platform, string | null>>;
   review_status?: ReviewStatus;
   created_at: Date;
@@ -216,6 +218,7 @@ const mapPostToFrontend = (post: {
     .map(([platform, text]) => ({
       platform: platform as "linkedin" | "instagram" | "reddit",
       content: text as string,
+      imageUrl: safeText(post.image_url),
       hashtags: [],
       version: 1,
       status: reviewStatus,
@@ -245,6 +248,7 @@ const mapPostToFrontend = (post: {
             {
               platform: "linkedin" as const,
               content: fallbackContent,
+              imageUrl: safeText(post.image_url),
               hashtags: [],
               version: 1,
               status: reviewStatus,
@@ -253,6 +257,7 @@ const mapPostToFrontend = (post: {
             },
           ],
     overallStatus: reviewStatus,
+    imageUrl: safeText(post.image_url),
     createdAt: post.created_at.toISOString(),
     aiResponse: post.ai_response,
     analytics: post.analytics,
@@ -364,13 +369,17 @@ export const generatePostDraft = async (
         ? workflow1Data.platforms
         : requestedPlatforms ?? [];
 
+    const persistedImageUrl = await persistImageUrl(workflow1Data.image_url, {
+      folder: "loomin-ai/drafts",
+    });
+
     const createPayload: Record<string, unknown> = {
       _id: randomUUID(),
       batch_id: randomUUID(),
       user_id: authUserId,
       brandId: brand._id,
       content: workflow1Data.content ?? {},
-      image_url: safeText(workflow1Data.image_url),
+      image_url: persistedImageUrl,
       platforms: resolvedPlatforms,
       platform_posts: {},
       results: [],
@@ -504,9 +513,14 @@ export const publishDraftPost = async (
     const resolvedRedditTitle =
       safeText(workflow1Data.title?.reddit) ?? resolvedDefaultTitle;
 
+    const persistedImageUrl =
+      (await persistImageUrl(safeText(workflow1Data.image_url) ?? safeText(post?.image_url), {
+        folder: "loomin-ai/publish",
+      })) ?? "";
+
     const publishPayload: Workflow2PublishPayload = {
       user_id: safeText(workflow1Data.user_id) ?? req.user!._id.toString(),
-      image_url: safeText(workflow1Data.image_url) ?? safeText(post?.image_url) ?? "",
+      image_url: persistedImageUrl,
       content: resolvedContent,
       title: {
         default: resolvedDefaultTitle,
@@ -553,12 +567,16 @@ export const publishDraftPost = async (
     const now = new Date();
     const successfulPlatforms = getSuccessfulPlatformsFromWorkflow2(workflow2Data);
     const hasSuccessfulPublish = successfulPlatforms.length > 0;
+    const persistedWorkflow2Image = await persistImageUrl(workflow2Data?.image_url, {
+      folder: "loomin-ai/publish",
+    });
+
     const updated = await Post.findOneAndUpdate(
       { _id: postId, user_id: req.user!._id.toString() },
       {
         $set: {
           ...(workflow2Data?.batch_id ? { batch_id: workflow2Data.batch_id } : {}),
-          ...(workflow2Data?.image_url ? { image_url: workflow2Data.image_url } : {}),
+          ...(persistedWorkflow2Image ? { image_url: persistedWorkflow2Image } : {}),
           ...(workflow2Data?.content ? { content: workflow2Data.content } : {}),
           ...(Array.isArray(workflow2Data?.results) ? { results: workflow2Data.results } : {}),
           ...(normalizePlatformPosts(workflow2Data?.platform_posts)

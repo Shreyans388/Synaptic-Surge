@@ -13,12 +13,12 @@ export default function Hero() {
       <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-gray-900 dark:text-white mb-6">
         Stop Scheduling. <br />
         <span className="bg-gradient-to-r from-sky-600 to-cyan-500 bg-clip-text text-transparent">
-          Start Looming.
+          Start with Loomin AI.
         </span>
       </h1>
 
       <p className="max-w-2xl mx-auto text-lg text-gray-600 dark:text-gray-400 mb-10">
-        Loomin agents don&apos;t just post content. They research trends, mimic your voice,
+        Loomin AI agents don&apos;t just post content. They research trends, mimic your voice,
         and engage with your niche while you focus on building.
       </p>
 

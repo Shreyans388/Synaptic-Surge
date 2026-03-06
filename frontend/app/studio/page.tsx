@@ -2,7 +2,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, Plus, Send, X } from "lucide-react";
+import { CalendarClock, ChevronDown, ChevronUp, Plus, Send, X } from "lucide-react";
+import Image from "next/image";
 import { toast } from "sonner";
 import { useGlobalStore } from "@/state/global.store";
 import { useAuthStore } from "@/state/auth.store";
@@ -78,6 +79,7 @@ export default function StudioPage() {
   const [selectedPlatformsByPost, setSelectedPlatformsByPost] = useState<
     Record<string, PublishPlatform[]>
   >({});
+  const [expandedByPost, setExpandedByPost] = useState<Record<string, boolean>>({});
   const generatingToastIdRef = useRef<string | number | null>(null);
   const publishingToastIdRef = useRef<string | number | null>(null);
 
@@ -130,7 +132,6 @@ export default function StudioPage() {
   };
 
   const canSubmit =
-    !!activeBrand?._id &&
     !!user?._id &&
     !!user?.email &&
     form.topic.trim().length > 0 &&
@@ -273,6 +274,7 @@ export default function StudioPage() {
             {draftPosts.map((post) => {
               const availablePlatforms = getAvailablePlatformsForPost(post);
               const selectedPlatforms = getSelectedPlatformsForPost(post);
+              const isExpanded = Boolean(expandedByPost[post.id]);
               return (
                 <div
                   key={post.id}
@@ -283,93 +285,146 @@ export default function StudioPage() {
                       <p className="font-semibold">{post.masterBrief.topic}</p>
                       <p className="text-xs text-muted capitalize">Status: {post.overallStatus}</p>
                     </div>
-                    <span className="text-xs text-muted">
-                      {post.platformDrafts.map((d) => d.platform).join(", ")}
-                    </span>
-                  </div>
-
-                  <p className="text-sm text-muted line-clamp-2">{post.platformDrafts[0]?.content}</p>
-
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-muted">Publish platforms</p>
-                    {availablePlatforms.length === 0 ? (
-                      <p className="text-xs text-amber-600">
-                        Connect LinkedIn or Instagram in Settings to publish this draft.
-                      </p>
-                    ) : (
-                      <div className="flex flex-wrap gap-3">
-                        {availablePlatforms.map((platform) => (
-                          <label key={platform} className="inline-flex items-center gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              checked={selectedPlatforms.includes(platform)}
-                              onChange={(e) => {
-                                setSelectedPlatformsByPost((prev) => {
-                                  const current = prev[post.id] ?? [];
-                                  if (e.target.checked) {
-                                    return {
-                                      ...prev,
-                                      [post.id]: Array.from(new Set([...current, platform])),
-                                    };
-                                  }
-
-                                  return {
-                                    ...prev,
-                                    [post.id]: current.filter((item) => item !== platform),
-                                  };
-                                });
-                              }}
-                            />
-                            <span className="capitalize">{platform}</span>
-                          </label>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-                    <label className="space-y-1">
-                      <span className="text-xs font-medium text-muted flex items-center gap-1">
-                        <CalendarClock size={14} /> Scheduled time (optional)
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs text-muted">
+                        {post.platformDrafts.map((d) => d.platform).join(", ")}
                       </span>
-                      <input
-                        type="datetime-local"
-                        value={scheduleByPost[post.id] ?? ""}
-                        onChange={(e) =>
-                          setScheduleByPost((prev) => ({
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setExpandedByPost((prev) => ({
                             ...prev,
-                            [post.id]: e.target.value,
+                            [post.id]: !prev[post.id],
                           }))
                         }
-                        className="ui-input"
-                      />
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const selectedContent = post.platformDrafts
-                          .filter((draft) => selectedPlatforms.includes(draft.platform as PublishPlatform))
-                          .reduce<NonNullable<Workflow1OutputPayload["content"]>>((acc, draft) => {
-                            acc[draft.platform] = draft.content;
-                            return acc;
-                          }, {});
-
-                        publishMutation.mutate({
-                          postId: post.id,
-                          scheduledAt: scheduleByPost[post.id],
-                          workflow1Output: {
-                            content: selectedContent,
-                            platforms: selectedPlatforms,
-                          },
-                        });
-                      }}
-                      disabled={publishMutation.isPending || selectedPlatforms.length === 0}
-                      className="self-end inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-65"
-                    >
-                      <Send size={14} />
-                      Publish
-                    </button>
+                        className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs text-muted transition hover:text-foreground"
+                      >
+                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                        {isExpanded ? "Collapse" : "Expand"}
+                      </button>
+                    </div>
                   </div>
+
+                  {!isExpanded ? (
+                    <p className="text-sm text-muted line-clamp-2">{post.platformDrafts[0]?.content}</p>
+                  ) : null}
+
+                  {isExpanded ? (
+                    <>
+                      {post.imageUrl ? (
+                        <div className="overflow-hidden rounded-xl border border-border bg-black/10">
+                          <Image
+                            src={post.imageUrl}
+                            alt={`Draft image for ${post.masterBrief.topic}`}
+                            width={1200}
+                            height={675}
+                            unoptimized
+                            className="h-auto w-full object-contain"
+                          />
+                        </div>
+                      ) : null}
+
+                      <div className="space-y-3">
+                        <p className="text-xs font-medium uppercase tracking-wide text-muted">
+                          Complete Draft Content
+                        </p>
+                        {post.platformDrafts.map((draft) => (
+                          <article
+                            key={`${post.id}-${draft.platform}`}
+                            className="rounded-lg border border-border bg-surface p-3"
+                          >
+                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
+                              {draft.platform}
+                            </p>
+                            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+                              {draft.content}
+                            </p>
+                          </article>
+                        ))}
+                      </div>
+
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-muted">Publish platforms</p>
+                        {availablePlatforms.length === 0 ? (
+                          <p className="text-xs text-amber-600">
+                            Connect LinkedIn or Instagram in Settings to publish this draft.
+                          </p>
+                        ) : (
+                          <div className="flex flex-wrap gap-3">
+                            {availablePlatforms.map((platform) => (
+                              <label key={platform} className="inline-flex items-center gap-2 text-sm">
+                                <input
+                                  type="checkbox"
+                                  checked={selectedPlatforms.includes(platform)}
+                                  onChange={(e) => {
+                                    setSelectedPlatformsByPost((prev) => {
+                                      const current = prev[post.id] ?? [];
+                                      if (e.target.checked) {
+                                        return {
+                                          ...prev,
+                                          [post.id]: Array.from(new Set([...current, platform])),
+                                        };
+                                      }
+
+                                      return {
+                                        ...prev,
+                                        [post.id]: current.filter((item) => item !== platform),
+                                      };
+                                    });
+                                  }}
+                                />
+                                <span className="capitalize">{platform}</span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+                        <label className="space-y-1">
+                          <span className="text-xs font-medium text-muted flex items-center gap-1">
+                            <CalendarClock size={14} /> Scheduled time (optional)
+                          </span>
+                          <input
+                            type="datetime-local"
+                            value={scheduleByPost[post.id] ?? ""}
+                            onChange={(e) =>
+                              setScheduleByPost((prev) => ({
+                                ...prev,
+                                [post.id]: e.target.value,
+                              }))
+                            }
+                            className="ui-input"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const selectedContent = post.platformDrafts
+                              .filter((draft) => selectedPlatforms.includes(draft.platform as PublishPlatform))
+                              .reduce<NonNullable<Workflow1OutputPayload["content"]>>((acc, draft) => {
+                                acc[draft.platform] = draft.content;
+                                return acc;
+                              }, {});
+
+                            publishMutation.mutate({
+                              postId: post.id,
+                              scheduledAt: scheduleByPost[post.id],
+                              workflow1Output: {
+                                content: selectedContent,
+                                platforms: selectedPlatforms,
+                              },
+                            });
+                          }}
+                          disabled={publishMutation.isPending || selectedPlatforms.length === 0}
+                          className="self-end inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-65"
+                        >
+                          <Send size={14} />
+                          Publish
+                        </button>
+                      </div>
+                    </>
+                  ) : null}
                 </div>
               );
             })}

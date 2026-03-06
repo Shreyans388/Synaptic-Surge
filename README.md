@@ -1,4 +1,4 @@
-# Synaptic-Surge
+# Loomin AI
 Marketing is a high-friction loop where 70% of time is manual. Unlike rigid "if-then" tools, Agentic AI is a teammate using reasoning, tool-use, and self-correction. It adapts to trends in real-time to hit business goals, freeing humans to focus on strategy rather than repetitive execution. Move from passive tools to active agency.
 
 
@@ -55,6 +55,18 @@ The Agentic AI Marketing Agent solves these challenges by:
 2. Configure environment variables and API keys
 3. Define marketing goals and constraints
 4. Run the agent and monitor outputs
+
+### Cloudinary Setup (Draft Images)
+Add these variables to your backend `.env` to persist generated/reference post images and render them in Studio draft cards:
+
+```env
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_UPLOAD_PRESET=your_unsigned_upload_preset
+```
+
+Notes:
+- The upload preset should be configured as unsigned in Cloudinary.
+- If these values are not set, the app falls back to the original image URL from workflow output.
 
 ## Future Enhancements
 - Advanced budget allocation

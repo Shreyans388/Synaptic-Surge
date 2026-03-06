@@ -20,7 +20,7 @@ export default function AgentPreview() {
           </div>
 
           <div className="flex items-center gap-2 font-mono text-xs text-gray-400">
-            <Terminal size={12} /> loomin_core_v1.0.0
+            <Terminal size={12} /> loomin_ai_core_v1.0.0
           </div>
         </div>
 

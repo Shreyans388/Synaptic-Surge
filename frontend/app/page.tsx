@@ -44,7 +44,7 @@ export default function LandingPage() {
       <nav className="mx-auto flex w-full max-w-7xl items-center justify-between p-6">
         <div className="flex items-center gap-2 text-xl font-black text-[var(--foreground)]">
           <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500" />
-          LOOMIN
+          LOOMIN AI
         </div>
         <div className="flex items-center gap-3">
           <Link
@@ -119,7 +119,7 @@ export default function LandingPage() {
           <div className="md:col-span-2">
             <div className="flex items-center gap-2 text-xl font-black text-[var(--foreground)]">
               <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500" />
-              LOOMIN
+              LOOMIN AI
             </div>
             <p className="mt-3 max-w-md text-sm leading-relaxed text-[var(--muted-foreground)]">
               Agentic content operations for brands that want faster execution with safer publishing workflows.
@@ -164,7 +164,7 @@ export default function LandingPage() {
 
         <div className="border-t border-[var(--border)] px-6 py-4">
           <p className="mx-auto w-full max-w-7xl text-xs text-[var(--muted)]">
-            {new Date().getFullYear()} LOOMIN. All rights reserved.
+            {new Date().getFullYear()} LOOMIN AI. All rights reserved.
           </p>
         </div>
       </footer>

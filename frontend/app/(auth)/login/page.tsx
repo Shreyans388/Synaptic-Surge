@@ -31,7 +31,7 @@ export default function Login() {
       <div className="hidden md:flex md:w-1/3 flex-col justify-between border-r border-zinc-800 bg-zinc-950 p-12">
         <div>
           <div className="flex items-center gap-2 text-2xl font-black tracking-tighter">
-            <div className="h-8 w-8 rounded-lg bg-sky-600" /> LOOMIN
+            <div className="h-8 w-8 rounded-lg bg-sky-600" /> LOOMIN AI
           </div>
           <h2 className="mt-20 text-3xl font-bold leading-tight">
             Welcome back to your <br /> content operations hub.
