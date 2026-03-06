@@ -1,8 +1,9 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, Plus, Send, X } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+
 import { toast } from "sonner";
 
 import { getBrandConnections } from "@/services/api/brand.api";
@@ -10,6 +11,7 @@ import {
   generateDraftPost,
   getPosts,
   publishDraftPost,
+  type GenerateWorkflow1Payload,
   type Workflow1OutputPayload,
   type Workflow2OutputPayload,
 } from "@/services/api/posts.api";
@@ -33,19 +35,19 @@ interface FormState {
   postDetails: string;
   context: string;
   platforms: PublishPlatform[];
-  imagePreference: "use_image" | "generate_new" | "use_reference" | "no_image";
+  imagePreference: "" | "use_image" | "generate_new" | "use_reference" | "no_image";
   imagePrompt: string;
   referenceImageUrl: string;
 }
 
 const initialState: FormState = {
   topic: "",
-  tone: "Casual",
+  tone: "",
   postDetails: "",
   context: "",
-  platforms: ["linkedin", "instagram"],
-  imagePreference: "use_reference",
-  imagePrompt: "Nice Technical",
+  platforms: [],
+  imagePreference: "",
+  imagePrompt: "",
   referenceImageUrl: "",
 };
 
@@ -85,6 +87,7 @@ export default function StudioPage() {
   const [scheduleByPost, setScheduleByPost] = useState<Record<string, string>>({});
   const [selectedPlatformsByPost, setSelectedPlatformsByPost] = useState<Record<string, PublishPlatform[]>>({});
   const generatingToastIdRef = useRef<string | number | null>(null);
+  const publishingToastIdRef = useRef<string | number | null>(null);
 
   const resetDialogForm = () => setForm(initialState);
 
@@ -131,35 +134,33 @@ export default function StudioPage() {
   useEffect(() => {
     setSelectedPlatformsByPost((prev) => {
       const next: Record<string, PublishPlatform[]> = {};
-
       for (const post of draftPosts) {
         const available = getAvailablePlatformsForPost(post);
-
         if (available.length === 0) {
           next[post.id] = [];
           continue;
         }
 
         const existing = prev[post.id] ?? available;
-        const filtered = existing.filter((p) => available.includes(p));
+        const filtered = existing.filter((platform) => available.includes(platform));
         next[post.id] = filtered.length > 0 ? filtered : available;
       }
-
-      if (JSON.stringify(prev) === JSON.stringify(next)) return prev;
       return next;
     });
   }, [draftPosts, connectedPublishPlatforms]);
 
   const canSubmit =
     !!activeBrand &&
-    form.topic.trim() &&
-    form.tone.trim() &&
-    form.context.trim() &&
+    form.topic.trim().length > 0 &&
+    form.tone.trim().length > 0 &&
+    form.context.trim().length > 0 &&
     form.platforms.length > 0;
 
   const generateMutation = useMutation({
     mutationFn: async () => {
-      if (!activeBrand) throw new Error("Please select a brand first");
+      if (!activeBrand) {
+        throw new Error("Please select a brand first");
+      }
 
       return generateDraftPost({
         userId: user?._id ?? "123",
@@ -190,10 +191,41 @@ export default function StudioPage() {
     },
   });
 
+  const handleGenerateDraft = () => {
+    if (!activeBrand) {
+      toast.error("Please select a brand first.");
+      return;
+    }
+    if (!user?._id || !user?.email) {
+      toast.error("Please log in again to generate drafts.");
+      return;
+    }
+
+    const payload: GenerateWorkflow1Payload = {
+      brandId: activeBrand._id,
+      userId: user._id,
+      userEmail: user.email,
+      brand_name: activeBrand.name?.trim() ?? "",
+      topic: form.topic.trim(),
+      tone: form.tone.trim(),
+      post_details: form.postDetails.trim(),
+      context: form.context.trim(),
+      platforms: form.platforms,
+      image_preference: form.imagePreference,
+      image_prompt: form.imagePrompt.trim(),
+      reference_image_url: form.referenceImageUrl.trim(),
+    };
+
+    generateMutation.mutate(payload);
+  };
+
   const publishMutation = useMutation({
     mutationFn: async ({ postId, scheduledAt, workflow1Output }: any) => {
       const scheduledIso = scheduledAt ? new Date(scheduledAt).toISOString() : null;
       return publishDraftPost(postId, scheduledIso, workflow1Output);
+    },
+    onMutate: () => {
+      publishingToastIdRef.current = toast.loading("Publishing post...");
     },
     onSuccess: (response, variables) => {
       queryClient.invalidateQueries({ queryKey: ["posts"] });
@@ -201,24 +233,29 @@ export default function StudioPage() {
       const successfulPlatforms = extractSuccessfulPublishPlatforms(response.workflow2);
 
       if (successfulPlatforms.length > 0) {
-        const pretty = successfulPlatforms.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(", ");
-        const message = `Post published on ${pretty}.`;
-
+        const prettyPlatforms = successfulPlatforms
+          .map((platform) => platform.charAt(0).toUpperCase() + platform.slice(1))
+          .join(", ");
+        const message = `Post published on ${prettyPlatforms}.`;
         toast.success(message);
-
         addNotification({
           id: crypto.randomUUID?.() ?? `${Date.now()}-${variables.postId}`,
           message,
           type: "success",
         });
-
         return;
       }
 
-      toast.success("Publish request completed.");
+      toast.success("Publish request completed.", {
+        id: publishingToastIdRef.current ?? undefined,
+      });
+      publishingToastIdRef.current = null;
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to publish post.");
+      toast.error(error.message || "Failed to publish post.", {
+        id: publishingToastIdRef.current ?? undefined,
+      });
+      publishingToastIdRef.current = null;
     },
   });
 
@@ -228,8 +265,8 @@ export default function StudioPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Content Studio</h1>
-          <p className="text-sm text-[var(--muted)]">
-            Generate drafts with Workflow 1 now, and publish later.
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Generate drafts with Workflow 1 now, and publish selected drafts later with your chosen schedule.
           </p>
         </div>
 
@@ -313,45 +350,41 @@ export default function StudioPage() {
 
       </div>
 
-      {/* DRAFT QUEUE */}
+      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+        <h2 className="text-lg font-semibold">Current Context</h2>
+        <p className="mt-2 text-sm text-[var(--muted)]">Active brand: {activeBrand?.name ?? "None selected"}</p>
+        <p className="mt-1 text-sm text-[var(--muted)]">Signed-in user: {user?.email ?? "Not available"}</p>
+      </section>
 
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 space-y-4">
+      <section className="rounded-2xl border border-border bg-surface p-5 space-y-4">
         <h2 className="text-lg font-semibold">Draft Queue</h2>
 
         {draftPosts.length === 0 ? (
-          <p className="text-sm text-[var(--muted)]">
-            No draft posts available.
-          </p>
+          <p className="text-sm text-[var(--muted)]">No draft posts available.</p>
         ) : (
           <div className="space-y-3">
             {draftPosts.map((post) => {
               const availablePlatforms = getAvailablePlatformsForPost(post);
               const selectedPlatforms = selectedPlatformsByPost[post.id] ?? [];
-
               return (
-                <div key={post.id} className="rounded-xl border border-[var(--border)] bg-transparent p-4 space-y-3">
-
+                <div
+                  key={post.id}
+                  className="rounded-xl border border-[var(--border)] bg-transparent p-4 space-y-3"
+                >
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="font-semibold">{post.masterBrief.topic}</p>
-                      <p className="text-xs text-[var(--muted)] capitalize">
-                        Status: {post.overallStatus}
-                      </p>
+                      <p className="text-xs text-[var(--muted)] capitalize">Status: {post.overallStatus}</p>
                     </div>
-                    <span className="text-xs text-[var(--muted)]">
+                    <span className="text-xs text-muted">
                       {post.platformDrafts.map((d) => d.platform).join(", ")}
                     </span>
                   </div>
 
-                  <p className="text-sm text-[var(--muted)] line-clamp-2">
-                    {post.platformDrafts[0]?.content}
-                  </p>
+                  <p className="text-sm text-[var(--muted)] line-clamp-2">{post.platformDrafts[0]?.content}</p>
 
                   <div className="space-y-2">
-                    <p className="text-xs font-medium text-[var(--muted)]">
-                      Publish platforms
-                    </p>
-
+                    <p className="text-xs font-medium text-[var(--muted)]">Publish platforms</p>
                     {availablePlatforms.length === 0 ? (
                       <p className="text-xs text-amber-600">
                         Connect LinkedIn or Instagram in Settings to publish this draft.
@@ -392,7 +425,7 @@ export default function StudioPage() {
                   <div className="grid gap-3 md:grid-cols-[1fr_auto]">
 
                     <label className="space-y-1">
-                      <span className="text-xs font-medium text-[var(--muted)] flex items-center gap-1">
+                      <span className="text-xs font-medium text-muted flex items-center gap-1">
                         <CalendarClock size={14} /> Scheduled time (optional)
                       </span>
 
@@ -447,6 +480,155 @@ export default function StudioPage() {
 
       </section>
 
+      {open ? (
+        <div className="ui-dialog-backdrop">
+          <div className="ui-dialog-panel max-w-3xl">
+            <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
+              <h3 className="text-lg font-semibold">Create Workflow 1 Payload</h3>
+              <button
+                onClick={closeDialog}
+                className="ui-btn-secondary rounded-lg p-2"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="max-h-[75vh] space-y-5 overflow-y-auto px-5 py-4">
+              <label className="space-y-1 block">
+                <span className="text-sm font-medium">Topic</span>
+                <input
+                  value={form.topic}
+                  onChange={(e) => setForm((prev) => ({ ...prev, topic: e.target.value }))}
+                  className="ui-input"
+                  placeholder="Startup growth strategies"
+                />
+              </label>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="space-y-1">
+                  <span className="text-sm font-medium">Tone</span>
+                  <input
+                    value={form.tone}
+                    onChange={(e) => setForm((prev) => ({ ...prev, tone: e.target.value }))}
+                    className="ui-input"
+                    placeholder="Casual"
+                  />
+                </label>
+
+                <label className="space-y-1">
+                  <span className="text-sm font-medium">Image preference</span>
+                  <select
+                    value={form.imagePreference}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        imagePreference: e.target.value as FormState["imagePreference"],
+                      }))
+                    }
+                    className="ui-select"
+                  >
+                    <option value="use_image">use_image</option>
+                    <option value="generate_new">generate_new</option>
+                    <option value="use_reference">use_reference</option>
+                    <option value="no_image">no_image</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-sm font-medium">Platforms</span>
+                <div className="flex flex-wrap gap-4">
+                  {(["linkedin", "instagram"] as const).map((platform) => (
+                    <label key={platform} className="inline-flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={form.platforms.includes(platform)}
+                        onChange={(e) =>
+                          setForm((prev) => {
+                            if (e.target.checked) {
+                              return {
+                                ...prev,
+                                platforms: Array.from(new Set([...prev.platforms, platform])),
+                              };
+                            }
+                            return {
+                              ...prev,
+                              platforms: prev.platforms.filter((item) => item !== platform),
+                            };
+                          })
+                        }
+                      />
+                      <span className="capitalize">{platform}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <label className="space-y-1 block">
+                <span className="text-sm font-medium">Post details</span>
+                <textarea
+                  value={form.postDetails}
+                  onChange={(e) => setForm((prev) => ({ ...prev, postDetails: e.target.value }))}
+                  rows={3}
+                  className="ui-input"
+                  placeholder="Keep it friendly, motivational, and easy to read"
+                />
+              </label>
+
+              <label className="space-y-1 block">
+                <span className="text-sm font-medium">Context</span>
+                <textarea
+                  value={form.context}
+                  onChange={(e) => setForm((prev) => ({ ...prev, context: e.target.value }))}
+                  rows={3}
+                  className="ui-input"
+                  placeholder="We help startups scale using AI automation and data-driven strategies"
+                />
+              </label>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="space-y-1">
+                  <span className="text-sm font-medium">Image prompt</span>
+                  <input
+                    value={form.imagePrompt}
+                    onChange={(e) => setForm((prev) => ({ ...prev, imagePrompt: e.target.value }))}
+                    className="ui-input"
+                    placeholder="Nice Technical"
+                  />
+                </label>
+
+                <label className="space-y-1">
+                  <span className="text-sm font-medium">Reference image URL</span>
+                  <input
+                    value={form.referenceImageUrl}
+                    onChange={(e) => setForm((prev) => ({ ...prev, referenceImageUrl: e.target.value }))}
+                    className="ui-input"
+                    placeholder="https://images.unsplash.com/..."
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 border-t border-[var(--border)] px-5 py-4">
+              <button
+                type="button"
+                onClick={closeDialog}
+                className="ui-btn-secondary"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => generateMutation.mutate()}
+                disabled={!canSubmit || generateMutation.isPending}
+                className="ui-btn-primary"
+              >
+                {generateMutation.isPending ? "Generating..." : "Generate Draft"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

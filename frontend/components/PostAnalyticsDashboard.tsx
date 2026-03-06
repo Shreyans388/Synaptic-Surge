@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { Post } from "@/types/domain.type";
 import {
   ResponsiveContainer,
@@ -42,22 +42,27 @@ const asStringArray = (value: unknown): string[] => {
   return value.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 };
 
+const hasMeaningfulValue = (value: unknown): boolean => {
+  if (typeof value === "string") return value.trim().length > 0;
+  if (typeof value === "number" || typeof value === "boolean") return true;
+  if (Array.isArray(value)) return value.some((item) => hasMeaningfulValue(item));
+  if (value && typeof value === "object") {
+    return Object.values(value as Record<string, unknown>).some((item) => hasMeaningfulValue(item));
+  }
+  return false;
+};
+
+const hasUsableAiResponse = (value: unknown): boolean => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return hasMeaningfulValue(value);
+};
+
 export default function PostAnalyticsDashboard({ posts }: Props) {
   const postsWithAi = useMemo(
-    () => posts.filter((post) => asRecord(post.aiResponse)),
+    () => posts.filter((post) => hasUsableAiResponse(post.aiResponse)),
     [posts]
   );
   const [selectedPostId, setSelectedPostId] = useState<string>("");
-
-  useEffect(() => {
-    if (!postsWithAi.length) {
-      setSelectedPostId("");
-      return;
-    }
-    if (!postsWithAi.some((post) => post.id === selectedPostId)) {
-      setSelectedPostId(postsWithAi[0].id);
-    }
-  }, [postsWithAi, selectedPostId]);
 
   if (!postsWithAi.length) {
     return (
@@ -112,7 +117,10 @@ export default function PostAnalyticsDashboard({ posts }: Props) {
   const overallPerformance = asString(summary.overall_performance);
   const bestPlatform = asString(summary.best_platform);
   const growthDirection = asString(summary.growth_direction);
-  const confidence = asNumber(summary.confidence_score);
+  const confidence =
+    asNumber(summary.confidence_score) ||
+    asNumber(aiResponse.confidence_score) ||
+    asNumber(aiResponse.confidence);
 
   return (
     <section className="space-y-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
@@ -132,7 +140,7 @@ export default function PostAnalyticsDashboard({ posts }: Props) {
           >
             {postsWithAi.map((post) => (
               <option key={post.id} value={post.id}>
-                {post.masterBrief.topic}
+                {post.masterBrief.topic} ({new Date(post.createdAt).toLocaleDateString()})
               </option>
             ))}
           </select>

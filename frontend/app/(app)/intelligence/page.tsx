@@ -6,15 +6,31 @@ import { useBrandStore } from "@/state/brand.store";
 import { getPosts } from "@/services/api/posts.api";
 import { syncAnalyticsNotifications } from "@/services/api/notifications.api";
 import PostAnalyticsDashboard from "@/components/PostAnalyticsDashboard";
-import { LucideIcon } from "lucide-react";
-import { Gauge, Send, Brain } from "lucide-react";
+import { LucideIcon, Gauge, Send, Brain } from "lucide-react";
+
+
+
+const hasMeaningfulValue = (value: unknown): boolean => {
+  if (typeof value === "string") return value.trim().length > 0;
+  if (typeof value === "number" || typeof value === "boolean") return true;
+  if (Array.isArray(value)) return value.some((item) => hasMeaningfulValue(item));
+  if (value && typeof value === "object") {
+    return Object.values(value as Record<string, unknown>).some((item) =>
+      hasMeaningfulValue(item)
+    );
+  }
+  return false;
+};
+
+const hasUsableAiResponse = (value: unknown): boolean => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return hasMeaningfulValue(value);
+};
+
+/* ---------- Page ---------- */
 
 export default function IntelligencePage() {
-  const {
-    activeBrand,
-    fetchBrands,
-    isLoadingBrands,
-  } = useBrandStore();
+  const { activeBrand, fetchBrands } = useBrandStore();
 
   // Ensure brands are loaded
   useEffect(() => {
@@ -35,15 +51,17 @@ export default function IntelligencePage() {
     });
   }, [activeBrand?._id]);
 
-  
+  const publishedPosts = posts.filter(
+    (p) => p.overallStatus === "published"
+  ).length;
+
+  const aiAnalyzedPosts = posts.filter((p) =>
+    hasUsableAiResponse(p.aiResponse)
+  ).length;
 
   const engagementScore =
     posts.length > 0
-      ? Math.round(
-          (posts.filter((p) => p.overallStatus === "published").length /
-            posts.length) *
-            100
-        )
+      ? Math.round((publishedPosts / posts.length) * 100)
       : 0;
 
   return (
@@ -52,32 +70,32 @@ export default function IntelligencePage() {
         Intelligence Center
       </h1>
 
-     <div className="grid md:grid-cols-3 gap-4">
-  <InsightCard
-    title="Engagement Score"
-    value={`${engagementScore}%`}
-    icon={Gauge}
-  />
+      <div className="grid md:grid-cols-3 gap-4">
+        <InsightCard
+          title="Engagement Score"
+          value={`${engagementScore}%`}
+          icon={Gauge}
+        />
 
-  <InsightCard
-    title="Published Posts"
-    value={
-      posts.filter((p) => p.overallStatus === "published").length
-    }
-    icon={Send}
-  />
+        <InsightCard
+          title="Published Posts"
+          value={publishedPosts}
+          icon={Send}
+        />
 
-  <InsightCard
-    title="AI-Analyzed Posts"
-    value={posts.filter((p) => !!p.aiResponse).length}
-    icon={Brain}
-  />
-</div>
+        <InsightCard
+          title="AI-Analyzed Posts"
+          value={aiAnalyzedPosts}
+          icon={Brain}
+        />
+      </div>
 
       <PostAnalyticsDashboard posts={posts} />
     </div>
   );
 }
+
+/* ---------- UI Card ---------- */
 
 function InsightCard({
   title,

@@ -43,18 +43,29 @@ export default function DashboardPage() {
   }, [fetchBrands]);
 
   // POSTS QUERY
-  const { data: posts = [] } = useQuery<Post[]>({
+  const {
+    data: posts = [],
+    isLoading: isLoadingPosts
+  } = useQuery<Post[]>({
     queryKey: ["posts", activeBrand?._id],
     queryFn: () => getPosts(activeBrand?._id as string),
     enabled: !!activeBrand?._id,
   });
 
   // CONNECTIONS QUERY
-  const { data: connections = [] } = useQuery({
+  const {
+    data: connections,
+    isLoading: isLoadingConnections
+  } = useQuery({
     queryKey: ["brand-connections", activeBrand?._id],
     queryFn: () => getBrandConnections(activeBrand?._id as string),
     enabled: !!activeBrand?._id,
   });
+
+  // GLOBAL LOADING STATE
+  if (isLoadingBrands || isLoadingPosts || isLoadingConnections) {
+    return <Loading />;
+  }
 
   if (!activeBrand && brands.length === 0) {
     return (
@@ -123,7 +134,7 @@ export default function DashboardPage() {
       {activeBrand && (
         <>
           {/* SOCIAL CONNECTIONS */}
-          {connections.length === 0 && (
+          {connections?.length === 0 && (
             <div className="rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-[#0B0E14] p-6">
               <div className="mb-4">
                 <h2 className="text-lg font-bold dark:text-white">
