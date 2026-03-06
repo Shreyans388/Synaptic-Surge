@@ -31,6 +31,26 @@ interface AuthState {
   checkAuth: () => Promise<void>;
 }
 
+const getErrorMessage = (error: unknown, fallback: string): string => {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "response" in error
+  ) {
+    const response = (error as { response?: { data?: { message?: string } } }).response;
+    const message = response?.data?.message;
+    if (typeof message === "string" && message.trim().length > 0) {
+      return message;
+    }
+  }
+
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+
+  return fallback;
+};
+
 
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -52,11 +72,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         user: res.data,
         isSigningUp: false,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({ isSigningUp: false });
 
-      const message =
-        error.response?.data?.message || "Signup failed";
+      const message = getErrorMessage(error, "Signup failed");
       throw new Error(message);
     }
   },
@@ -74,11 +93,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         user: res.data,
         isLoggingIn: false,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       set({ isLoggingIn: false });
 
-      const message =
-        error.response?.data?.message || "Login failed";
+      const message = getErrorMessage(error, "Login failed");
       throw new Error(message);
     }
   },
@@ -90,9 +108,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       await axiosInstance.post("/auth/logout");
 
       set({ user: null });
-    } catch (error: any) {
-      const message =
-        error.response?.data?.message || "Logout failed";
+    } catch (error: unknown) {
+      const message = getErrorMessage(error, "Logout failed");
       throw new Error(message);
     }
   },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, Plus, Send, X } from "lucide-react";
 import { toast } from "sonner";
@@ -10,6 +10,7 @@ import {
   generateDraftPost,
   getPosts,
   publishDraftPost,
+  type GenerateWorkflow1Payload,
   type Workflow1OutputPayload,
   type Workflow2OutputPayload,
 } from "@/services/api/posts.api";
@@ -24,19 +25,19 @@ interface FormState {
   postDetails: string;
   context: string;
   platforms: PublishPlatform[];
-  imagePreference: "use_image" | "generate_new" | "use_reference" | "no_image";
+  imagePreference: "" | "use_image" | "generate_new" | "use_reference" | "no_image";
   imagePrompt: string;
   referenceImageUrl: string;
 }
 
 const initialState: FormState = {
   topic: "",
-  tone: "Casual",
+  tone: "",
   postDetails: "",
   context: "",
-  platforms: ["linkedin", "instagram"],
-  imagePreference: "use_reference",
-  imagePrompt: "Nice Technical",
+  platforms: [],
+  imagePreference: "",
+  imagePrompt: "",
   referenceImageUrl: "",
 };
 
@@ -78,6 +79,7 @@ export default function StudioPage() {
     Record<string, PublishPlatform[]>
   >({});
   const generatingToastIdRef = useRef<string | number | null>(null);
+  const publishingToastIdRef = useRef<string | number | null>(null);
 
   const resetDialogForm = () => setForm(initialState);
   const openDialog = () => {
@@ -119,50 +121,26 @@ export default function StudioPage() {
     return connectedPublishPlatforms.filter((platform) => inDraft.has(platform));
   };
 
-  useEffect(() => {
-    setSelectedPlatformsByPost((prev) => {
-      const next: Record<string, PublishPlatform[]> = {};
-      for (const post of draftPosts) {
-        const available = getAvailablePlatformsForPost(post);
-        if (available.length === 0) {
-          next[post.id] = [];
-          continue;
-        }
-
-        const existing = prev[post.id] ?? available;
-        const filtered = existing.filter((platform) => available.includes(platform));
-        next[post.id] = filtered.length > 0 ? filtered : available;
-      }
-      return next;
-    });
-  }, [draftPosts, connectedPublishPlatforms]);
+  const getSelectedPlatformsForPost = (post: Post): PublishPlatform[] => {
+    const available = getAvailablePlatformsForPost(post);
+    if (available.length === 0) return [];
+    const existing = selectedPlatformsByPost[post.id] ?? available;
+    const filtered = existing.filter((platform) => available.includes(platform));
+    return filtered.length > 0 ? filtered : available;
+  };
 
   const canSubmit =
-    !!activeBrand &&
+    !!activeBrand?._id &&
+    !!user?._id &&
+    !!user?.email &&
     form.topic.trim().length > 0 &&
     form.tone.trim().length > 0 &&
     form.context.trim().length > 0 &&
     form.platforms.length > 0;
 
   const generateMutation = useMutation({
-    mutationFn: async () => {
-      if (!activeBrand) {
-        throw new Error("Please select a brand first");
-      }
-
-      return generateDraftPost({
-        userId: user?._id ?? "123",
-        userEmail: user?.email ?? "",
-        brand_name: activeBrand.name,
-        topic: form.topic.trim(),
-        tone: form.tone.trim(),
-        post_details: form.postDetails.trim(),
-        context: form.context.trim(),
-        platforms: form.platforms,
-        image_preference: form.imagePreference,
-        image_prompt: form.imagePrompt.trim(),
-        reference_image_url: form.referenceImageUrl.trim(),
-      });
+    mutationFn: async (payload: GenerateWorkflow1Payload) => {
+      return generateDraftPost(payload);
     },
     onMutate: () => {
       closeDialog();
@@ -184,6 +162,34 @@ export default function StudioPage() {
     },
   });
 
+  const handleGenerateDraft = () => {
+    if (!activeBrand) {
+      toast.error("Please select a brand first.");
+      return;
+    }
+    if (!user?._id || !user?.email) {
+      toast.error("Please log in again to generate drafts.");
+      return;
+    }
+
+    const payload: GenerateWorkflow1Payload = {
+      brandId: activeBrand._id,
+      userId: user._id,
+      userEmail: user.email,
+      brand_name: activeBrand.name?.trim() ?? "",
+      topic: form.topic.trim(),
+      tone: form.tone.trim(),
+      post_details: form.postDetails.trim(),
+      context: form.context.trim(),
+      platforms: form.platforms,
+      image_preference: form.imagePreference,
+      image_prompt: form.imagePrompt.trim(),
+      reference_image_url: form.referenceImageUrl.trim(),
+    };
+
+    generateMutation.mutate(payload);
+  };
+
   const publishMutation = useMutation({
     mutationFn: async ({
       postId,
@@ -197,6 +203,9 @@ export default function StudioPage() {
       const scheduledIso = scheduledAt ? new Date(scheduledAt).toISOString() : null;
       return publishDraftPost(postId, scheduledIso, workflow1Output);
     },
+    onMutate: () => {
+      publishingToastIdRef.current = toast.loading("Publishing post...");
+    },
     onSuccess: (response, variables) => {
       queryClient.invalidateQueries({ queryKey: ["posts"] });
       queryClient.invalidateQueries({ queryKey: ["notifications", activeBrand?._id] });
@@ -207,19 +216,28 @@ export default function StudioPage() {
           .map((platform) => platform.charAt(0).toUpperCase() + platform.slice(1))
           .join(", ");
         const message = `Post published on ${prettyPlatforms}.`;
-        toast.success(message);
+        toast.success(message, {
+          id: publishingToastIdRef.current ?? undefined,
+        });
         addNotification({
           id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${variables.postId}`,
           message,
           type: "success",
         });
+        publishingToastIdRef.current = null;
         return;
       }
 
-      toast.success("Publish request completed.");
+      toast.success("Publish request completed.", {
+        id: publishingToastIdRef.current ?? undefined,
+      });
+      publishingToastIdRef.current = null;
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to publish post.");
+      toast.error(error.message || "Failed to publish post.", {
+        id: publishingToastIdRef.current ?? undefined,
+      });
+      publishingToastIdRef.current = null;
     },
   });
 
@@ -228,7 +246,7 @@ export default function StudioPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Content Studio</h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
+          <p className="mt-1 text-sm text-muted">
             Generate drafts with Workflow 1 now, and publish selected drafts later with your chosen schedule.
           </p>
         </div>
@@ -240,40 +258,40 @@ export default function StudioPage() {
         </button>
       </div>
 
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
+      <section className="rounded-2xl border border-border bg-surface p-5">
         <h2 className="text-lg font-semibold">Current Context</h2>
-        <p className="mt-2 text-sm text-[var(--muted)]">Active brand: {activeBrand?.name ?? "None selected"}</p>
-        <p className="mt-1 text-sm text-[var(--muted)]">Signed-in user: {user?.email ?? "Not available"}</p>
+        <p className="mt-2 text-sm text-">Active brand: {activeBrand?.name ?? "None selected"}</p>
+        <p className="mt-1 text-sm text-muted">Signed-in user: {user?.email ?? "Not available"}</p>
       </section>
 
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 space-y-4">
+      <section className="rounded-2xl border border-border bg-surface p-5 space-y-4">
         <h2 className="text-lg font-semibold">Draft Queue</h2>
         {draftPosts.length === 0 ? (
-          <p className="text-sm text-[var(--muted)]">No draft posts available.</p>
+          <p className="text-sm text-muted">No draft posts available.</p>
         ) : (
           <div className="space-y-3">
             {draftPosts.map((post) => {
               const availablePlatforms = getAvailablePlatformsForPost(post);
-              const selectedPlatforms = selectedPlatformsByPost[post.id] ?? [];
+              const selectedPlatforms = getSelectedPlatformsForPost(post);
               return (
                 <div
                   key={post.id}
-                  className="rounded-xl border border-[var(--border)] bg-transparent p-4 space-y-3"
+                  className="rounded-xl border border-border bg-transparent p-4 space-y-3"
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="font-semibold">{post.masterBrief.topic}</p>
-                      <p className="text-xs text-[var(--muted)] capitalize">Status: {post.overallStatus}</p>
+                      <p className="text-xs text-muted capitalize">Status: {post.overallStatus}</p>
                     </div>
-                    <span className="text-xs text-[var(--muted)]">
+                    <span className="text-xs text-muted">
                       {post.platformDrafts.map((d) => d.platform).join(", ")}
                     </span>
                   </div>
 
-                  <p className="text-sm text-[var(--muted)] line-clamp-2">{post.platformDrafts[0]?.content}</p>
+                  <p className="text-sm text-muted line-clamp-2">{post.platformDrafts[0]?.content}</p>
 
                   <div className="space-y-2">
-                    <p className="text-xs font-medium text-[var(--muted)]">Publish platforms</p>
+                    <p className="text-xs font-medium text-muted">Publish platforms</p>
                     {availablePlatforms.length === 0 ? (
                       <p className="text-xs text-amber-600">
                         Connect LinkedIn or Instagram in Settings to publish this draft.
@@ -311,7 +329,7 @@ export default function StudioPage() {
 
                   <div className="grid gap-3 md:grid-cols-[1fr_auto]">
                     <label className="space-y-1">
-                      <span className="text-xs font-medium text-[var(--muted)] flex items-center gap-1">
+                      <span className="text-xs font-medium text-muted flex items-center gap-1">
                         <CalendarClock size={14} /> Scheduled time (optional)
                       </span>
                       <input
@@ -349,7 +367,7 @@ export default function StudioPage() {
                       className="self-end inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-65"
                     >
                       <Send size={14} />
-                      {publishMutation.isPending ? "Publishing..." : "Publish"}
+                      Publish
                     </button>
                   </div>
                 </div>
@@ -362,7 +380,7 @@ export default function StudioPage() {
       {open ? (
         <div className="ui-dialog-backdrop">
           <div className="ui-dialog-panel max-w-3xl">
-            <div className="flex items-center justify-between border-b border-[var(--border)] px-5 py-4">
+            <div className="flex items-center justify-between border-b border-border px-5 py-4">
               <h3 className="text-lg font-semibold">Create Workflow 1 Payload</h3>
               <button
                 onClick={closeDialog}
@@ -406,6 +424,7 @@ export default function StudioPage() {
                     }
                     className="ui-select"
                   >
+                    <option value="">Select preference</option>
                     <option value="use_image">use_image</option>
                     <option value="generate_new">generate_new</option>
                     <option value="use_reference">use_reference</option>
@@ -498,7 +517,7 @@ export default function StudioPage() {
               </button>
               <button
                 type="button"
-                onClick={() => generateMutation.mutate()}
+                onClick={handleGenerateDraft}
                 disabled={!canSubmit || generateMutation.isPending}
                 className="ui-btn-primary"
               >

@@ -79,15 +79,12 @@ export const AnimatedSpan = ({
 
   const sequence = useSequence()
   const itemIndex = useItemIndex()
-  const [hasStarted, setHasStarted] = useState(false)
-  useEffect(() => {
-    if (!sequence || itemIndex === null) return
-    if (!sequence.sequenceStarted) return
-    if (hasStarted) return
-    if (sequence.activeIndex === itemIndex) {
-      setHasStarted(true)
-    }
-  }, [sequence?.activeIndex, sequence?.sequenceStarted, hasStarted, itemIndex])
+  const hasStarted = Boolean(
+    sequence &&
+      itemIndex !== null &&
+      sequence.sequenceStarted &&
+      sequence.activeIndex >= itemIndex
+  )
 
   const shouldAnimate = sequence ? hasStarted : startOnView ? isInView : true
 

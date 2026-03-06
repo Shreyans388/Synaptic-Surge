@@ -7,6 +7,21 @@ import { getPosts } from "@/services/api/posts.api";
 import { syncAnalyticsNotifications } from "@/services/api/notifications.api";
 import PostAnalyticsDashboard from "@/components/PostAnalyticsDashboard";
 
+const hasMeaningfulValue = (value: unknown): boolean => {
+  if (typeof value === "string") return value.trim().length > 0;
+  if (typeof value === "number" || typeof value === "boolean") return true;
+  if (Array.isArray(value)) return value.some((item) => hasMeaningfulValue(item));
+  if (value && typeof value === "object") {
+    return Object.values(value as Record<string, unknown>).some((item) => hasMeaningfulValue(item));
+  }
+  return false;
+};
+
+const hasUsableAiResponse = (value: unknown): boolean => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return hasMeaningfulValue(value);
+};
+
 export default function IntelligencePage() {
   const activeBrand = useGlobalStore((s) => s.activeBrand);
 
@@ -54,7 +69,7 @@ export default function IntelligencePage() {
         />
         <InsightCard
           title="AI-Analyzed Posts"
-          value={posts.filter((p) => !!p.aiResponse).length}
+          value={posts.filter((p) => hasUsableAiResponse(p.aiResponse)).length}
         />
       </div>
 
