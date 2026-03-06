@@ -15,27 +15,21 @@ export default function AppShell({
   const pathname = usePathname();
   const router = useRouter();
 
-  const {
-    user,
-    isCheckingAuth,
-    checkAuth,
-    logout,
-  } = useAuthStore();
+  const { user, isCheckingAuth, checkAuth } = useAuthStore();
 
   const isPublicRoute =
     !!pathname && PUBLIC_ROUTES.has(pathname);
 
+  
   useEffect(() => {
-    if (isPublicRoute) return;
     checkAuth();
-  }, [checkAuth, isPublicRoute]);
+  }, [checkAuth]);
 
   useEffect(() => {
     if (isCheckingAuth) return;
 
     if (!user && !isPublicRoute) {
       router.replace("/login");
-      return;
     }
 
     if (user && (pathname === "/login" || pathname === "/signup")) {

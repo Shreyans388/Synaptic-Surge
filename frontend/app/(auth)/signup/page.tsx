@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { AgentPersonaCard } from "@/components/onboarding/AgentPersonaCard";
+import { useAuthStore } from "@/state/auth.store";
 import { Brain, Rocket } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { AgentPersonaCard } from "@/components/onboarding/AgentPersonaCard";
-import { useAuthStore } from "@/state/auth.store";
+import { useState } from "react";
 
 export default function SignUp() {
   const router = useRouter();
@@ -38,9 +38,13 @@ export default function SignUp() {
     <div className="min-h-screen flex flex-col md:flex-row bg-black text-white">
       <div className="hidden md:flex md:w-1/3 flex-col justify-between border-r border-zinc-800 bg-zinc-950 p-12">
         <div>
-          <div className="flex items-center gap-2 text-2xl font-black tracking-tighter">
-            <div className="h-8 w-8 rounded-lg bg-sky-600" /> LOOMIN AI
-          </div>
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-2xl font-black tracking-tighter hover:opacity-80 transition"
+          >
+            <div className="h-8 w-8 rounded-lg bg-sky-600" />
+            LOOMIN AI
+          </Link>
           <h2 className="mt-20 text-3xl font-bold leading-tight">
             Your AI workforce is <br /> ready to deploy.
           </h2>
@@ -123,7 +127,10 @@ export default function SignUp() {
 
           <p className="mt-8 text-center text-sm text-zinc-400">
             Already have an account?{" "}
-            <Link href="/login" className="font-bold text-sky-400 hover:text-sky-300">
+            <Link
+              href="/login"
+              className="font-bold text-sky-400 hover:text-sky-300"
+            >
               Log in
             </Link>
           </p>

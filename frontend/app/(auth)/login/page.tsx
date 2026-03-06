@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowRight, Mail, Lock } from "lucide-react";
+import { useAuthStore } from "@/state/auth.store";
+import { ArrowRight, Lock, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/state/auth.store";
+import { useState } from "react";
 
 export default function Login() {
   const router = useRouter();
@@ -30,9 +30,13 @@ export default function Login() {
     <div className="min-h-screen flex flex-col md:flex-row bg-black text-white">
       <div className="hidden md:flex md:w-1/3 flex-col justify-between border-r border-zinc-800 bg-zinc-950 p-12">
         <div>
-          <div className="flex items-center gap-2 text-2xl font-black tracking-tighter">
-            <div className="h-8 w-8 rounded-lg bg-sky-600" /> LOOMIN AI
-          </div>
+          <Link
+            href="/"
+            className="flex items-center gap-2 text-2xl font-black tracking-tighter hover:opacity-80 transition"
+          >
+            <div className="h-8 w-8 rounded-lg bg-sky-600" />
+            LOOMIN AI
+          </Link>
           <h2 className="mt-20 text-3xl font-bold leading-tight">
             Welcome back to your <br /> content operations hub.
           </h2>
@@ -51,7 +55,10 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+              <Mail
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
+                size={18}
+              />
               <input
                 type="email"
                 placeholder="Work Email"
@@ -63,7 +70,10 @@ export default function Login() {
             </div>
 
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+              <Lock
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500"
+                size={18}
+              />
               <input
                 type="password"
                 placeholder="Password"
@@ -88,7 +98,10 @@ export default function Login() {
 
           <p className="mt-8 text-center text-sm text-zinc-400">
             Don&apos;t have an account?{" "}
-            <Link href="/signup" className="font-bold text-sky-400 hover:text-sky-300">
+            <Link
+              href="/signup"
+              className="font-bold text-sky-400 hover:text-sky-300"
+            >
               Create one
             </Link>
           </p>

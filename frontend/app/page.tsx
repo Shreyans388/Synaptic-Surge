@@ -1,9 +1,16 @@
 // app/page.tsx
-import { Bot, Gauge, Radar, ShieldCheck } from "lucide-react";
-import Link from "next/link";
-import Hero from "@/components/Hero";
+"use client";
+
 import AgentPreview from "@/components/AgentPreview";
+import Hero from "@/components/Hero";
 import { ReviewsMarquee } from "@/components/ReviewsMarquee";
+import { Bot, Gauge, LayoutDashboard, Radar, Settings, ShieldCheck } from "lucide-react";
+import Link from "next/link";
+
+
+import { useAuthStore } from "@/state/auth.store";
+
+
 
 const features = [
   {
@@ -39,6 +46,9 @@ const stats = [
 ];
 
 export default function LandingPage() {
+  const { user } = useAuthStore();
+  
+
   return (
     <main className="min-h-screen bg-[var(--background)] transition-colors duration-300">
       <nav className="mx-auto flex w-full max-w-7xl items-center justify-between p-6">
@@ -46,56 +56,88 @@ export default function LandingPage() {
           <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500" />
           LOOMIN AI
         </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/login"
-            className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--border-strong)]"
-          >
-            Login
-          </Link>
-          <Link
-            href="/signup"
-            className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
-          >
-            Sign up
-          </Link>
-        </div>
+
+        {!user ? (
+          <div className="flex items-center gap-3">
+            <Link
+              href="/login"
+              className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--foreground)] transition-colors hover:border-[var(--border-strong)]"
+            >
+              Login
+            </Link>
+            <Link
+              href="/signup"
+              className="rounded-lg bg-sky-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-700"
+            >
+              Sign up
+            </Link>
+          </div>
+        ) : (
+          <div className="group relative pb-16">
+            <div className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full bg-gradient-to-br from-sky-500 via-cyan-400 to-indigo-500 text-sm font-bold text-white shadow-md">
+              {user.fullName?.[0]?.toUpperCase() || "U"}
+            </div>
+
+            <div className="absolute right-0 top-12 w-44 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 text-sm opacity-0 shadow-lg transition-all duration-200 group-hover:opacity-100">
+              <p className="mb-2 pl-1 font-semibold text-[var(--foreground)]">
+  {user.fullName || "User"}
+</p>
+
+              
+
+<div className="flex flex-col text-sm">
+  <Link
+    href="/dashboard"
+    className="flex items-center gap-2 rounded-md px-2 py-1 text-[var(--muted-foreground)] transition hover:bg-[var(--background)] hover:text-[var(--foreground)]"
+  >
+    <LayoutDashboard size={14} />
+    Dashboard
+  </Link>
+
+  <Link
+    href="/settings"
+    className="flex items-center gap-2 rounded-md px-2 py-1 text-[var(--muted-foreground)] transition hover:bg-[var(--background)] hover:text-[var(--foreground)]"
+  >
+    <Settings size={14} />
+    Settings
+  </Link>
+</div>
+            </div>
+          </div>
+        )}
       </nav>
 
       <Hero />
       <AgentPreview />
 
       <section className="mx-auto mt-16 w-full max-w-5xl px-6">
-  <div className="grid gap-4 md:grid-cols-3">
-    {stats.map((item) => (
-      <div
-        key={item.label}
-        className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 text-center"
-      >
-        <p className="text-2xl font-extrabold tracking-tight text-[var(--foreground)]">
-          {item.value}
-        </p>
-        <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-          {item.label}
-        </p>
-      </div>
-    ))}
-  </div>
-</section>
+        <div className="grid gap-4 md:grid-cols-3">
+          {stats.map((item) => (
+            <div
+              key={item.label}
+              className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-5 py-4 text-center"
+            >
+              <p className="text-2xl font-extrabold tracking-tight text-[var(--foreground)]">
+                {item.value}
+              </p>
+              <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                {item.label}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <section className="mx-auto mt-16 w-full max-w-7xl px-6 pb-20">
         <div className="mb-12 flex flex-col items-center text-center">
-  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-500">
-    CAPABILITIES
-  </p>
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-500">
+            CAPABILITIES
+          </p>
 
-  <h2 className="mt-3 max-w-xl text-3xl font-extrabold tracking-tight 
- text-[var(--foreground)]">
-    Built for full-funnel content ops
-  </h2>
-
-
-</div>
+          <h2 className="mt-3 max-w-xl text-3xl font-extrabold tracking-tight text-[var(--foreground)]">
+            Built for full-funnel content ops
+          </h2>
+        </div>
 
         <div className="mt-6 grid gap-5 md:grid-cols-2">
           {features.map((feature) => (
@@ -106,12 +148,17 @@ export default function LandingPage() {
               <div className="mb-3 inline-flex rounded-lg bg-sky-500/10 p-2 text-sky-600 dark:text-sky-300">
                 <feature.icon size={18} />
               </div>
-              <h3 className="text-lg font-bold text-[var(--foreground)]">{feature.title}</h3>
-             <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">{feature.description}</p>
+              <h3 className="text-lg font-bold text-[var(--foreground)]">
+                {feature.title}
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-[var(--muted-foreground)]">
+                {feature.description}
+              </p>
             </article>
           ))}
         </div>
       </section>
+
       <ReviewsMarquee />
 
       <footer className="mt-20 border-t border-[var(--border)] bg-[color:color-mix(in_srgb,var(--surface)_92%,black_8%)]">
@@ -122,7 +169,8 @@ export default function LandingPage() {
               LOOMIN AI
             </div>
             <p className="mt-3 max-w-md text-sm leading-relaxed text-[var(--muted-foreground)]">
-              Agentic content operations for brands that want faster execution with safer publishing workflows.
+              Agentic content operations for brands that want faster execution
+              with safer publishing workflows.
             </p>
             <div className="mt-5">
               <Link href="/signup" className="ui-btn-primary">
@@ -132,30 +180,52 @@ export default function LandingPage() {
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Product</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+              Product
+            </h3>
             <div className="mt-3 space-y-2 text-sm">
-              <Link href="/login" className="block text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]">
+              <Link
+                href="/login"
+                className="block text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]"
+              >
                 Dashboard
               </Link>
-              <Link href="/signup" className="block text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]">
+              <Link
+                href="/signup"
+                className="block text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]"
+              >
                 Get Started
               </Link>
-              <Link href="/intelligence" className="block text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]">
+              <Link
+                href="/intelligence"
+                className="block text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]"
+              >
                 Intelligence
               </Link>
             </div>
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">Company</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
+              Company
+            </h3>
             <div className="mt-3 space-y-2 text-sm">
-              <a href="#" className="block text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]">
+              <a
+                href="#"
+                className="block text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]"
+              >
                 Privacy
               </a>
-              <a href="#" className="block text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]">
+              <a
+                href="#"
+                className="block text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]"
+              >
                 Terms
               </a>
-              <a href="#" className="block text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]">
+              <a
+                href="#"
+                className="block text-[var(--muted-foreground)] transition hover:text-[var(--foreground)]"
+              >
                 Contact
               </a>
             </div>
