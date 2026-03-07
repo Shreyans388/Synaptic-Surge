@@ -1,5 +1,4 @@
-// app/not-found.tsx
-"use client";
+﻿"use client";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/state/auth.store";

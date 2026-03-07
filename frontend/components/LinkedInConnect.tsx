@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { useBrandStore } from "@/state/brand.store";
 
 export default function LinkedInConnect() {
@@ -13,7 +13,6 @@ export default function LinkedInConnect() {
 
     setLoading(true);
 
-    // Let the browser handle the OAuth redirect
     window.location.href = `/api/oauth/linkedin?brandId=${activeBrand._id}`;
   };
 

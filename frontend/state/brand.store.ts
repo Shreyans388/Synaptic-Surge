@@ -1,9 +1,6 @@
-import { create } from "zustand";
+﻿import { create } from "zustand";
 import axiosInstance from "@/services/axios";
 import { isAxiosError } from "axios";
-//
-// Types (aligned with backend)
-//
 
 export type LogoPosition =
   | "top-left"
@@ -41,10 +38,6 @@ export interface BrandConnection {
   updatedAt: string;
 }
 
-//
-// Store Interface
-//
-
 interface BrandState {
   brands: Brand[];
   activeBrand: Brand | null;
@@ -67,10 +60,6 @@ interface BrandState {
   getOAuthUrl: (platform: PlatformType, userId: string, brandId: string) => Promise<string>;
 }
 
-//
-// Store
-//
-
 export const useBrandStore = create<BrandState>((set, get) => ({
   brands: [],
   activeBrand: null,
@@ -81,9 +70,6 @@ export const useBrandStore = create<BrandState>((set, get) => ({
   isUpdatingBrand: false,
   isLoadingConnections: false,
 
-  //
-  // GET ALL BRANDS
-  //
   fetchBrands: async () => {
     try {
       set({ isLoadingBrands: true });
@@ -95,7 +81,6 @@ export const useBrandStore = create<BrandState>((set, get) => ({
         isLoadingBrands: false,
       });
 
-      // auto-select first brand if none active
       if (!get().activeBrand && res.data.length > 0) {
         set({ activeBrand: res.data[0] });
       }
@@ -115,9 +100,6 @@ export const useBrandStore = create<BrandState>((set, get) => ({
     }
   },
 
-  //
-  // CREATE BRAND
-  //
   createBrand: async (data) => {
     try {
       set({ isCreatingBrand: true });
@@ -138,9 +120,6 @@ export const useBrandStore = create<BrandState>((set, get) => ({
     }
   },
 
-  //
-  // UPDATE BRAND
-  //
   updateBrand: async (brandId, data) => {
     try {
       set({ isUpdatingBrand: true });
@@ -159,9 +138,6 @@ export const useBrandStore = create<BrandState>((set, get) => ({
     }
   },
 
-  //
-  // SET ACTIVE BRAND (local only)
-  //
   setActiveBrand: (brandId) => {
     const brand = get().brands.find((b) => b._id === brandId);
     if (brand) {
@@ -169,9 +145,6 @@ export const useBrandStore = create<BrandState>((set, get) => ({
     }
   },
 
-  //
-  // GET BRAND CONNECTIONS
-  //
   fetchConnections: async (brandId) => {
     try {
       set({ isLoadingConnections: true });
@@ -222,3 +195,4 @@ export const useBrandStore = create<BrandState>((set, get) => ({
     }
   }
 }));
+

@@ -1,12 +1,16 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, ChevronDown, ChevronUp, Plus, Send, X } from "lucide-react";
+import { 
+  CalendarClock, ChevronDown, ChevronUp, Plus, Send, X, 
+  Sparkles, Layout, CheckCircle2
+} from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 import { useGlobalStore } from "@/state/global.store";
 import { useAuthStore } from "@/state/auth.store";
+import ThemedSelect from "@/components/ui/themed-select";
 import {
   generateDraftPost,
   getPosts,
@@ -46,16 +50,11 @@ const extractSuccessfulPublishPlatforms = (
   workflow2: Workflow2OutputPayload | undefined
 ): PublishPlatform[] => {
   const successful = new Set<PublishPlatform>();
-
   for (const result of workflow2?.results ?? []) {
-    if (
-      (result.platform === "linkedin" || result.platform === "instagram") &&
-      result.success === true
-    ) {
+    if ((result.platform === "linkedin" || result.platform === "instagram") && result.success === true) {
       successful.add(result.platform);
     }
   }
-
   const platformPosts = workflow2?.platform_posts ?? {};
   for (const platform of ["linkedin", "instagram"] as const) {
     const postId = platformPosts[platform];
@@ -63,7 +62,6 @@ const extractSuccessfulPublishPlatforms = (
       successful.add(platform);
     }
   }
-
   return Array.from(successful);
 };
 
@@ -76,15 +74,17 @@ export default function StudioPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(initialState);
   const [scheduleByPost, setScheduleByPost] = useState<Record<string, string>>({});
-  const [selectedPlatformsByPost, setSelectedPlatformsByPost] = useState<
-    Record<string, PublishPlatform[]>
-  >({});
+  const [selectedPlatformsByPost, setSelectedPlatformsByPost] = useState<Record<string, PublishPlatform[]>>({});
   const [expandedByPost, setExpandedByPost] = useState<Record<string, boolean>>({});
   const generatingToastIdRef = useRef<string | number | null>(null);
   const publishingToastIdRef = useRef<string | number | null>(null);
 
   const resetDialogForm = () => setForm(initialState);
   const openDialog = () => {
+    if (!activeBrand?._id) {
+      toast.error("Please select a brand first.");
+      return;
+    }
     resetDialogForm();
     setOpen(true);
   };
@@ -140,25 +140,19 @@ export default function StudioPage() {
     form.platforms.length > 0;
 
   const generateMutation = useMutation({
-    mutationFn: async (payload: GenerateWorkflow1Payload) => {
-      return generateDraftPost(payload);
-    },
+    mutationFn: async (payload: GenerateWorkflow1Payload) => generateDraftPost(payload),
     onMutate: () => {
       closeDialog();
-      generatingToastIdRef.current = toast.loading("Post is generating...");
+      generatingToastIdRef.current = toast.loading("AI is crafting your draft...");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] });
       setForm(initialState);
-      toast.success("Draft generated successfully.", {
-        id: generatingToastIdRef.current ?? undefined,
-      });
+      toast.success("Draft generated successfully.", { id: generatingToastIdRef.current ?? undefined });
       generatingToastIdRef.current = null;
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to generate draft.", {
-        id: generatingToastIdRef.current ?? undefined,
-      });
+      toast.error(error.message || "Failed to generate draft.", { id: generatingToastIdRef.current ?? undefined });
       generatingToastIdRef.current = null;
     },
   });
@@ -172,7 +166,6 @@ export default function StudioPage() {
       toast.error("Please log in again to generate drafts.");
       return;
     }
-
     const payload: GenerateWorkflow1Payload = {
       brandId: activeBrand._id,
       userId: user._id,
@@ -187,90 +180,83 @@ export default function StudioPage() {
       image_prompt: form.imagePrompt.trim(),
       reference_image_url: form.referenceImageUrl.trim(),
     };
-
     generateMutation.mutate(payload);
   };
 
   const publishMutation = useMutation({
-    mutationFn: async ({
-      postId,
-      scheduledAt,
-      workflow1Output,
-    }: {
-      postId: string;
-      scheduledAt?: string;
-      workflow1Output?: Workflow1OutputPayload;
-    }) => {
+    mutationFn: async ({ postId, scheduledAt, workflow1Output }: { postId: string; scheduledAt?: string; workflow1Output?: Workflow1OutputPayload; }) => {
       const scheduledIso = scheduledAt ? new Date(scheduledAt).toISOString() : null;
       return publishDraftPost(postId, scheduledIso, workflow1Output);
     },
-    onMutate: () => {
-      publishingToastIdRef.current = toast.loading("Publishing post...");
-    },
+    onMutate: () => { publishingToastIdRef.current = toast.loading("Publishing post..."); },
     onSuccess: (response, variables) => {
       queryClient.invalidateQueries({ queryKey: ["posts"] });
       queryClient.invalidateQueries({ queryKey: ["notifications", activeBrand?._id] });
-
       const successfulPlatforms = extractSuccessfulPublishPlatforms(response.workflow2);
       if (successfulPlatforms.length > 0) {
-        const prettyPlatforms = successfulPlatforms
-          .map((platform) => platform.charAt(0).toUpperCase() + platform.slice(1))
-          .join(", ");
+        const prettyPlatforms = successfulPlatforms.map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(", ");
         const message = `Post published on ${prettyPlatforms}.`;
-        toast.success(message, {
-          id: publishingToastIdRef.current ?? undefined,
-        });
-        addNotification({
-          id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${variables.postId}`,
-          message,
-          type: "success",
-        });
+        toast.success(message, { id: publishingToastIdRef.current ?? undefined });
+        addNotification({ id: globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${variables.postId}`, message, type: "success" });
         publishingToastIdRef.current = null;
         return;
       }
-
-      toast.success("Publish request completed.", {
-        id: publishingToastIdRef.current ?? undefined,
-      });
+      toast.success("Publish request completed.", { id: publishingToastIdRef.current ?? undefined });
       publishingToastIdRef.current = null;
     },
     onError: (error) => {
-      toast.error(error.message || "Failed to publish post.", {
-        id: publishingToastIdRef.current ?? undefined,
-      });
+      toast.error(error.message || "Failed to publish post.", { id: publishingToastIdRef.current ?? undefined });
       publishingToastIdRef.current = null;
     },
   });
 
   return (
-    <div className="mx-auto max-w-5xl p-6 space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Content Studio</h1>
-          <p className="mt-1 text-sm text-muted">
-            Generate drafts with Workflow 1 now, and publish selected drafts later with your chosen schedule.
+    <div className="mx-auto max-w-5xl p-6 space-y-10 bg-[#0A0A0A] text-white min-h-screen">
+      
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-white/5 pb-10">
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sky-400 text-[10px] font-bold uppercase tracking-[0.2em]">
+            <Sparkles size={14} /> Agent Workspace
+          </div>
+          <h1 className="text-4xl font-serif font-light tracking-tight">Content Studio</h1>
+          <p className="text-gray-500 text-sm max-w-md leading-relaxed">
+            Synthesize new content and orchestrate your social calendar.
           </p>
         </div>
         <button
           onClick={openDialog}
-          className="ui-btn-primary"
+          className="flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-bold text-black transition-all hover:scale-105 active:scale-95"
         >
-          <Plus size={16} /> Generate Draft
+          <Plus size={18} /> Generate Draft
         </button>
       </div>
 
-      <section className="rounded-2xl border border-border bg-surface p-5">
-        <h2 className="text-lg font-semibold">Current Context</h2>
-        <p className="mt-2 text-sm text-">Active brand: {activeBrand?.name ?? "None selected"}</p>
-        <p className="mt-1 text-sm text-muted">Signed-in user: {user?.email ?? "Not available"}</p>
-      </section>
+      
+      <div className="inline-flex flex-wrap items-center gap-6 rounded-2xl border border-white/5 bg-white/5 px-6 py-4 backdrop-blur-md">
+        <div className="flex items-center gap-3 border-r border-white/10 pr-6">
+          <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Brand</span>
+          <span className="text-sm font-medium">{activeBrand?.name ?? "None"}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Operator</span>
+          <span className="text-sm font-medium text-gray-300">{user?.email ?? "N/A"}</span>
+        </div>
+      </div>
 
-      <section className="rounded-2xl border border-border bg-surface p-5 space-y-4">
-        <h2 className="text-lg font-semibold">Draft Queue</h2>
+      
+      <section className="space-y-6">
+        <div className="flex items-center gap-2 border-b border-white/5 pb-4">
+          <Layout size={18} className="text-gray-500" />
+          <h2 className="text-lg font-medium tracking-tight">Draft Queue</h2>
+        </div>
+        
         {draftPosts.length === 0 ? (
-          <p className="text-sm text-muted">No draft posts available.</p>
+          <div className="rounded-[2rem] border border-dashed border-white/10 py-24 text-center">
+            <p className="text-gray-500 text-sm font-light italic">No pending drafts in the synthesis engine.</p>
+          </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {draftPosts.map((post) => {
               const availablePlatforms = getAvailablePlatformsForPost(post);
               const selectedPlatforms = getSelectedPlatformsForPost(post);
@@ -278,153 +264,127 @@ export default function StudioPage() {
               return (
                 <div
                   key={post.id}
-                  className="rounded-xl border border-border bg-transparent p-4 space-y-3"
+                  className={`group overflow-hidden rounded-[1.5rem] border transition-all duration-300 ${
+                    isExpanded ? "border-white/20 bg-[#121212]" : "border-white/5 bg-white/[0.02] hover:bg-white/[0.04]"
+                  }`}
                 >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-semibold">{post.masterBrief.topic}</p>
-                      <p className="text-xs text-muted capitalize">Status: {post.overallStatus}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs text-muted">
-                        {post.platformDrafts.map((d) => d.platform).join(", ")}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setExpandedByPost((prev) => ({
-                            ...prev,
-                            [post.id]: !prev[post.id],
-                          }))
-                        }
-                        className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-xs text-muted transition hover:text-foreground"
-                      >
-                        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        {isExpanded ? "Collapse" : "Expand"}
-                      </button>
-                    </div>
-                  </div>
-
-                  {!isExpanded ? (
-                    <p className="text-sm text-muted line-clamp-2">{post.platformDrafts[0]?.content}</p>
-                  ) : null}
-
-                  {isExpanded ? (
-                    <>
-                      {post.imageUrl ? (
-                        <div className="overflow-hidden rounded-xl border border-border bg-black/10">
-                          <Image
-                            src={post.imageUrl}
-                            alt={`Draft image for ${post.masterBrief.topic}`}
-                            width={1200}
-                            height={675}
-                            unoptimized
-                            className="h-auto w-full object-contain"
-                          />
-                        </div>
-                      ) : null}
-
-                      <div className="space-y-3">
-                        <p className="text-xs font-medium uppercase tracking-wide text-muted">
-                          Complete Draft Content
-                        </p>
-                        {post.platformDrafts.map((draft) => (
-                          <article
-                            key={`${post.id}-${draft.platform}`}
-                            className="rounded-lg border border-border bg-surface p-3"
-                          >
-                            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
-                              {draft.platform}
-                            </p>
-                            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
-                              {draft.content}
-                            </p>
-                          </article>
-                        ))}
+                  <div className="p-6">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-lg font-medium text-white">{post.masterBrief.topic}</p>
+                        <p className="text-[10px] uppercase tracking-widest text-gray-500 mt-1">Status: {post.overallStatus}</p>
                       </div>
-
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-muted">Publish platforms</p>
-                        {availablePlatforms.length === 0 ? (
-                          <p className="text-xs text-amber-600">
-                            Connect LinkedIn or Instagram in Settings to publish this draft.
-                          </p>
-                        ) : (
-                          <div className="flex flex-wrap gap-3">
-                            {availablePlatforms.map((platform) => (
-                              <label key={platform} className="inline-flex items-center gap-2 text-sm">
-                                <input
-                                  type="checkbox"
-                                  checked={selectedPlatforms.includes(platform)}
-                                  onChange={(e) => {
-                                    setSelectedPlatformsByPost((prev) => {
-                                      const current = prev[post.id] ?? [];
-                                      if (e.target.checked) {
-                                        return {
-                                          ...prev,
-                                          [post.id]: Array.from(new Set([...current, platform])),
-                                        };
-                                      }
-
-                                      return {
-                                        ...prev,
-                                        [post.id]: current.filter((item) => item !== platform),
-                                      };
-                                    });
-                                  }}
-                                />
-                                <span className="capitalize">{platform}</span>
-                              </label>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-
-                      <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-                        <label className="space-y-1">
-                          <span className="text-xs font-medium text-muted flex items-center gap-1">
-                            <CalendarClock size={14} /> Scheduled time (optional)
-                          </span>
-                          <input
-                            type="datetime-local"
-                            value={scheduleByPost[post.id] ?? ""}
-                            onChange={(e) =>
-                              setScheduleByPost((prev) => ({
-                                ...prev,
-                                [post.id]: e.target.value,
-                              }))
-                            }
-                            className="ui-input"
-                          />
-                        </label>
+                      <div className="flex items-center gap-4">
+                        <span className="hidden md:block text-[10px] text-gray-500 uppercase tracking-widest">
+                          {post.platformDrafts.map((d) => d.platform).join(" â€¢ ")}
+                        </span>
                         <button
                           type="button"
-                          onClick={() => {
-                            const selectedContent = post.platformDrafts
-                              .filter((draft) => selectedPlatforms.includes(draft.platform as PublishPlatform))
-                              .reduce<NonNullable<Workflow1OutputPayload["content"]>>((acc, draft) => {
-                                acc[draft.platform] = draft.content;
-                                return acc;
-                              }, {});
-
-                            publishMutation.mutate({
-                              postId: post.id,
-                              scheduledAt: scheduleByPost[post.id],
-                              workflow1Output: {
-                                content: selectedContent,
-                                platforms: selectedPlatforms,
-                              },
-                            });
-                          }}
-                          disabled={publishMutation.isPending || selectedPlatforms.length === 0}
-                          className="self-end inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-65"
+                          onClick={() => setExpandedByPost((prev) => ({ ...prev, [post.id]: !prev[post.id] }))}
+                          className="flex items-center gap-1 rounded-full border border-white/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:bg-white hover:text-black transition-all"
                         >
-                          <Send size={14} />
-                          Publish
+                          {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                          {isExpanded ? "Close" : "Review"}
                         </button>
                       </div>
-                    </>
-                  ) : null}
+                    </div>
+
+                    {!isExpanded && (
+                      <p className="mt-4 text-sm text-gray-500 line-clamp-1 italic font-light">
+                        {post.platformDrafts[0]?.content}
+                      </p>
+                    )}
+
+                    {isExpanded && (
+                      <div className="mt-8 space-y-8 animate-in fade-in slide-in-from-top-2">
+                        {post.imageUrl && (
+                          <div className="relative aspect-video w-full overflow-hidden rounded-2xl border border-white/10 bg-black">
+                            <Image src={post.imageUrl} alt="Draft Preview" fill unoptimized className="object-contain" />
+                          </div>
+                        )}
+
+                        <div className="space-y-4">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">Synthesized Content</p>
+                          <div className="grid gap-4">
+                            {post.platformDrafts.map((draft) => (
+                              <article key={`${post.id}-${draft.platform}`} className="rounded-2xl border border-white/5 bg-white/[0.03] p-6">
+                                <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-sky-500">{draft.platform}</p>
+                                <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-300 font-light">{draft.content}</p>
+                              </article>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col md:flex-row items-end gap-8 pt-8 border-t border-white/5">
+                          <div className="flex-1 space-y-4">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Publishing To</p>
+                            {availablePlatforms.length === 0 ? (
+                              <p className="text-xs text-amber-500/80 italic">Connect accounts in settings to publish.</p>
+                            ) : (
+                              <div className="flex flex-wrap gap-6">
+                                {availablePlatforms.map((platform) => (
+                                  <label key={platform} className="flex items-center gap-3 cursor-pointer group/label">
+                                    <div className="relative">
+                                      <input
+                                        type="checkbox"
+                                        className="peer hidden"
+                                        checked={selectedPlatforms.includes(platform)}
+                                        onChange={(e) => {
+                                          setSelectedPlatformsByPost((prev) => {
+                                            const current = prev[post.id] ?? [];
+                                            if (e.target.checked) return { ...prev, [post.id]: Array.from(new Set([...current, platform])) };
+                                            return { ...prev, [post.id]: current.filter((item) => item !== platform) };
+                                          });
+                                        }}
+                                      />
+                                      <div className="h-5 w-5 rounded-md border border-white/10 transition-all peer-checked:bg-sky-500 peer-checked:border-sky-500 flex items-center justify-center">
+                                        {selectedPlatforms.includes(platform) && <CheckCircle2 size={12} className="text-white" />}
+                                      </div>
+                                    </div>
+                                    <span className="text-sm text-gray-400 capitalize group-hover/label:text-white">{platform}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="space-y-3">
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Schedule Time (Optional)</p>
+                            <div className="relative">
+                              <CalendarClock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600" />
+                              <input
+                                type="datetime-local"
+                                value={scheduleByPost[post.id] ?? ""}
+                                onChange={(e) => setScheduleByPost((prev) => ({ ...prev, [post.id]: e.target.value }))}
+                                className="bg-white/5 border border-white/10 rounded-xl px-10 py-3 text-sm focus:outline-none focus:border-sky-500/50 transition-colors"
+                              />
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const selectedContent = post.platformDrafts
+                                .filter((draft) => selectedPlatforms.includes(draft.platform as PublishPlatform))
+                                .reduce<NonNullable<Workflow1OutputPayload["content"]>>((acc, draft) => {
+                                  acc[draft.platform] = draft.content;
+                                  return acc;
+                                }, {});
+                              publishMutation.mutate({
+                                postId: post.id,
+                                scheduledAt: scheduleByPost[post.id],
+                                workflow1Output: { content: selectedContent, platforms: selectedPlatforms },
+                              });
+                            }}
+                            disabled={publishMutation.isPending || selectedPlatforms.length === 0}
+                            className="bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:grayscale px-10 py-3 rounded-2xl text-sm font-bold transition-all flex items-center gap-2"
+                          >
+                            <Send size={16} /> Deploy Post
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -432,156 +392,152 @@ export default function StudioPage() {
         )}
       </section>
 
-      {open ? (
-        <div className="ui-dialog-backdrop">
-          <div className="ui-dialog-panel max-w-3xl">
-            <div className="flex items-center justify-between border-b border-border px-5 py-4">
-              <h3 className="text-lg font-semibold">Create Workflow 1 Payload</h3>
-              <button
-                onClick={closeDialog}
-                className="ui-btn-secondary rounded-lg p-2"
-              >
-                <X size={16} />
+      
+      {open && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-xl bg-black/60">
+          <div className="w-full max-w-2xl overflow-hidden rounded-[2.5rem] border border-white/10 bg-[#121212] shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-center justify-between border-b border-white/5 px-8 py-6">
+              <div>
+                <h3 className="text-2xl font-serif">Workflow Configuration</h3>
+                <p className="text-[10px] text-gray-500 mt-1 uppercase tracking-widest font-bold">Stage 1: Synthesis Engine</p>
+              </div>
+              <button onClick={closeDialog} className="rounded-full bg-white/5 p-2 text-gray-400 hover:text-white transition-colors">
+                <X size={20} />
               </button>
             </div>
 
-            <div className="max-h-[75vh] space-y-5 overflow-y-auto px-5 py-4">
-              <label className="space-y-1 block">
-                <span className="text-sm font-medium">Topic</span>
+            <div className="max-h-[60vh] overflow-y-auto px-8 py-8 space-y-6 custom-scrollbar">
+              <label className="block space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Core Topic</span>
                 <input
                   value={form.topic}
                   onChange={(e) => setForm((prev) => ({ ...prev, topic: e.target.value }))}
-                  className="ui-input"
-                  placeholder="Startup growth strategies"
+                  className="w-full bg-white/5 border border-white/5 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-sky-500/30 transition-all placeholder:text-gray-700"
+                  placeholder="e.g. AI-driven growth for startups"
                 />
               </label>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="space-y-1">
-                  <span className="text-sm font-medium">Tone</span>
+              <div className="grid gap-6 md:grid-cols-2">
+                <label className="block space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Brand Voice</span>
                   <input
                     value={form.tone}
                     onChange={(e) => setForm((prev) => ({ ...prev, tone: e.target.value }))}
-                    className="ui-input"
-                    placeholder="Casual"
+                    className="w-full bg-white/5 border border-white/5 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-sky-500/30 transition-all placeholder:text-gray-700"
+                    placeholder="e.g. Provocative, Casual"
                   />
                 </label>
-
-                <label className="space-y-1">
-                  <span className="text-sm font-medium">Image preference</span>
-                  <select
+                <label className="block space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Visual Preference</span>
+                  <ThemedSelect
                     value={form.imagePreference}
-                    onChange={(e) =>
+                    onChange={(nextValue) =>
                       setForm((prev) => ({
                         ...prev,
-                        imagePreference: e.target.value as FormState["imagePreference"],
+                        imagePreference: nextValue as FormState["imagePreference"],
                       }))
                     }
-                    className="ui-select"
-                  >
-                    <option value="">Select preference</option>
-                    <option value="use_image">use_image</option>
-                    <option value="generate_new">generate_new</option>
-                    <option value="use_reference">use_reference</option>
-                    <option value="no_image">no_image</option>
-                  </select>
+                    options={IMAGE_PREFERENCE_OPTIONS}
+                    placeholder="Select preference"
+                    buttonClassName="w-full rounded-2xl border-white/10 bg-white/5 px-5 py-4 text-white"
+                  />
                 </label>
               </div>
 
-              <div className="space-y-2">
-                <span className="text-sm font-medium">Platforms</span>
-                <div className="flex flex-wrap gap-4">
+              <div className="space-y-3">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Target Platforms</span>
+                <div className="flex flex-wrap gap-6">
                   {(["linkedin", "instagram"] as const).map((platform) => (
-                    <label key={platform} className="inline-flex items-center gap-2 text-sm">
+                    <label key={platform} className="flex items-center gap-3 cursor-pointer group/label">
                       <input
                         type="checkbox"
+                        className="hidden peer"
                         checked={form.platforms.includes(platform)}
-                        onChange={(e) =>
-                          setForm((prev) => {
-                            if (e.target.checked) {
-                              return {
-                                ...prev,
-                                platforms: Array.from(new Set([...prev.platforms, platform])),
-                              };
-                            }
-                            return {
-                              ...prev,
-                              platforms: prev.platforms.filter((item) => item !== platform),
-                            };
-                          })
-                        }
+                        onChange={(e) => setForm((prev) => {
+                          if (e.target.checked) return { ...prev, platforms: Array.from(new Set([...prev.platforms, platform])) };
+                          return { ...prev, platforms: prev.platforms.filter((item) => item !== platform) };
+                        })}
                       />
-                      <span className="capitalize">{platform}</span>
+                      <div className="h-5 w-5 rounded-md border border-white/10 transition-all peer-checked:bg-sky-500 peer-checked:border-sky-500 flex items-center justify-center">
+                        {form.platforms.includes(platform) && <CheckCircle2 size={12} className="text-white" />}
+                      </div>
+                      <span className="text-sm text-gray-400 capitalize group-hover/label:text-white transition-colors">{platform}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
-              <label className="space-y-1 block">
-                <span className="text-sm font-medium">Post details</span>
+              <label className="block space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Post Details</span>
                 <textarea
                   value={form.postDetails}
                   onChange={(e) => setForm((prev) => ({ ...prev, postDetails: e.target.value }))}
                   rows={3}
-                  className="ui-input"
-                  placeholder="Keep it friendly, motivational, and easy to read"
+                  className="w-full bg-white/5 border border-white/5 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-sky-500/30 transition-all resize-none placeholder:text-gray-700"
+                  placeholder="Drafting instructions..."
                 />
               </label>
 
-              <label className="space-y-1 block">
-                <span className="text-sm font-medium">Context</span>
+              <label className="block space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Strategic Context</span>
                 <textarea
                   value={form.context}
                   onChange={(e) => setForm((prev) => ({ ...prev, context: e.target.value }))}
                   rows={3}
-                  className="ui-input"
-                  placeholder="We help startups scale using AI automation and data-driven strategies"
+                  className="w-full bg-white/5 border border-white/5 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-sky-500/30 transition-all resize-none placeholder:text-gray-700"
+                  placeholder="Context for the AI operator..."
                 />
               </label>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="space-y-1">
-                  <span className="text-sm font-medium">Image prompt</span>
+              <div className="grid gap-6 md:grid-cols-2">
+                <label className="block space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Image Prompt</span>
                   <input
                     value={form.imagePrompt}
                     onChange={(e) => setForm((prev) => ({ ...prev, imagePrompt: e.target.value }))}
-                    className="ui-input"
-                    placeholder="Nice Technical"
+                    className="w-full bg-white/5 border border-white/5 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-sky-500/30 transition-all"
+                    placeholder="Nice Technical..."
                   />
                 </label>
-
-                <label className="space-y-1">
-                  <span className="text-sm font-medium">Reference image URL</span>
+                <label className="block space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Reference URL</span>
                   <input
                     value={form.referenceImageUrl}
                     onChange={(e) => setForm((prev) => ({ ...prev, referenceImageUrl: e.target.value }))}
-                    className="ui-input"
-                    placeholder="https://images.unsplash.com/..."
+                    className="w-full bg-white/5 border border-white/5 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-sky-500/30 transition-all"
+                    placeholder="https://..."
                   />
                 </label>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-3 border-t border-[var(--border)] px-5 py-4">
-              <button
-                type="button"
-                onClick={closeDialog}
-                className="ui-btn-secondary"
-              >
+            <div className="flex items-center justify-end gap-6 border-t border-white/5 px-8 py-6 bg-white/[0.01]">
+              <button onClick={closeDialog} className="text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-white transition-colors">
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleGenerateDraft}
                 disabled={!canSubmit || generateMutation.isPending}
-                className="ui-btn-primary"
+                className="bg-white text-black px-10 py-3 rounded-full text-sm font-bold transition-transform hover:scale-105 active:scale-95 disabled:opacity-30"
               >
-                {generateMutation.isPending ? "Generating..." : "Generate Draft"}
+                {generateMutation.isPending ? "Generating..." : "Synthesize Draft"}
               </button>
             </div>
           </div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
+
+const IMAGE_PREFERENCE_OPTIONS: Array<{
+  label: string;
+  value: FormState["imagePreference"];
+}> = [
+  { label: "Use provided image", value: "use_image" },
+  { label: "Generate new image", value: "generate_new" },
+  { label: "Use reference image", value: "use_reference" },
+  { label: "No image", value: "no_image" },
+];
+

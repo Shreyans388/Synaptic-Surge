@@ -1,7 +1,5 @@
-import axiosInstance from "@/services/axios";
+﻿import axiosInstance from "@/services/axios";
 import { create } from "zustand";
-
-
 
 interface User {
   _id: string;
@@ -51,17 +49,12 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
   return fallback;
 };
 
-
-
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isSigningUp: false,
   isLoggingIn: false,
   isCheckingAuth: true,
 
-  //
-  // SIGNUP
-  //
   signup: async (data) => {
     try {
       set({ isSigningUp: true });
@@ -80,9 +73,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  //
-  // LOGIN
-  //
   login: async (data) => {
     try {
       set({ isLoggingIn: true });
@@ -100,8 +90,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       throw new Error(message);
     }
   },
-
-
 
   logout: async () => {
     try {
@@ -131,3 +119,4 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 }));
+

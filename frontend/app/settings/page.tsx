@@ -1,15 +1,13 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, LogOut, Shield, Globe, Palette, Mic2, Layout, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-// Stores
 import { useGlobalStore } from "@/state/global.store";
 import { useAuthStore } from "@/state/auth.store";
 
-// API Services
 import { logoutUser } from "@/services/api/auth.api";
 import {
   createBrand,
@@ -27,11 +25,9 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
 
-  // Global Store
   const activeBrand = useGlobalStore((s) => s.activeBrand);
   const setActiveBrand = useGlobalStore((s) => s.setActiveBrand);
 
-  // Auth Store
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
 
@@ -43,7 +39,6 @@ export default function SettingsPage() {
   const oauthStatus = searchParams.get("status") || searchParams.get("linkedin_connected");
   const oauthProvider = searchParams.get("oauth") || "linkedin";
 
-  // Queries
   const brandsQuery = useQuery({
     queryKey: ["brands"],
     queryFn: getBrands,
@@ -55,7 +50,6 @@ export default function SettingsPage() {
     enabled: Boolean(activeBrand?._id),
   });
 
-  // Effects & Computed Data
   useEffect(() => {
     if (activeBrand || !brandsQuery.data?.length) return;
     const first = brandsQuery.data[0];
@@ -71,17 +65,14 @@ export default function SettingsPage() {
     () => new Set((connectionsQuery.data ?? []).map((item) => item.platform)),
     [connectionsQuery.data]
   );
+
   const userInitials = useMemo(() => {
     const name = user?.fullName?.trim();
     if (!name) return "U";
     const parts = name.split(/\s+/).filter(Boolean);
-    return parts
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase() ?? "")
-      .join("");
+    return parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
   }, [user?.fullName]);
 
-  // Mutations
   const createBrandMutation = useMutation({
     mutationFn: () => createBrand({ name: newBrandName.trim() }),
     onSuccess: (brand: BrandRecord) => {
@@ -118,7 +109,6 @@ export default function SettingsPage() {
       setProfileSaveError(null);
       queryClient.invalidateQueries({ queryKey: ["brands"] });
       setIsBrandProfileOpen(false);
-      alert("Profile saved successfully!");
     },
     onError: (error: Error) => {
       setProfileSaveError(error.message || "Failed to save brand profile");
@@ -134,229 +124,206 @@ export default function SettingsPage() {
   });
 
   return (
-    <div className="max-w-4xl space-y-8 p-6">
-      <h1 className="text-2xl font-semibold">Settings</h1>
+    <div className="max-w-5xl mx-auto space-y-12 p-8 bg-[#0A0A0A] text-white min-h-screen">
+      <header className="space-y-2 border-b border-white/5 pb-8">
+        <h1 className="text-4xl font-serif font-light tracking-tight">System Settings</h1>
+        <p className="text-gray-500 text-sm">Configure brand identities and platform authorizations.</p>
+      </header>
 
-      <section className="relative overflow-hidden rounded-2xl border border-[var(--border)] bg-gradient-to-br from-slate-900 via-slate-900 to-sky-950 p-5 text-white">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-sky-500/20 blur-2xl" />
-        <div className="pointer-events-none absolute -bottom-12 left-14 h-28 w-28 rounded-full bg-cyan-300/20 blur-2xl" />
-        <div className="relative flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/20 bg-white/10 text-lg font-semibold tracking-wide">
+      
+      <section className="group relative overflow-hidden rounded-[2.5rem] border border-white/5 bg-gradient-to-br from-[#111] via-[#0A0A0A] to-[#050505] p-8 transition-all hover:border-white/10">
+        <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-sky-500/5 blur-[100px]" />
+        
+        <div className="relative flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-6">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[2rem] border border-white/10 bg-white/5 text-2xl font-serif text-sky-400">
               {userInitials}
             </div>
             <div className="space-y-1">
-              <p className="text-xs uppercase tracking-[0.18em] text-sky-200/90">User Profile</p>
-              <h2 className="text-xl font-semibold leading-tight">{user?.fullName ?? "Your account"}</h2>
-              <p className="text-sm text-slate-200">{user?.email ?? "No email available"}</p>
+              <p className="text-[10px] uppercase tracking-[0.3em] text-sky-500 font-black">Authorized Operator</p>
+              <h2 className="text-2xl font-serif font-light leading-tight">{user?.fullName ?? "Agent"}</h2>
+              <p className="text-sm text-gray-500">{user?.email}</p>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="rounded-xl border border-white/15 bg-white/5 px-4 py-3">
-              <p className="text-lg font-semibold">{brandsQuery.data?.length ?? 0}</p>
-              <p className="text-xs text-slate-300">Brands</p>
-            </div>
-            <div className="rounded-xl border border-white/15 bg-white/5 px-4 py-3">
-              <p className="text-lg font-semibold">{connectedPlatforms.size}</p>
-              <p className="text-xs text-slate-300">Connected</p>
-            </div>
-            <div className="rounded-xl border border-white/15 bg-white/5 px-4 py-3">
-              <p className="truncate text-sm font-medium">{activeBrand?.name ?? "None"}</p>
-              <p className="text-xs text-slate-300">Active Brand</p>
-            </div>
+          
+          <div className="flex gap-4">
+            <MetricBox label="Brands" value={brandsQuery.data?.length ?? 0} />
+            <MetricBox label="Uplinks" value={connectedPlatforms.size} />
+            <div className="hidden lg:block w-px h-12 bg-white/5 mx-2" />
+            <button
+              onClick={() => logoutMutation.mutate()}
+              disabled={logoutMutation.isPending}
+              className="flex items-center gap-2 rounded-full border border-red-500/20 bg-red-500/5 px-6 py-3 text-[10px] font-black uppercase tracking-widest text-red-500 transition-all hover:bg-red-500 hover:text-white"
+            >
+              <LogOut size={14} /> {logoutMutation.isPending ? "Terminating..." : "Logout"}
+            </button>
           </div>
         </div>
       </section>
 
-      <section className="ui-panel space-y-4 p-5">
-        <div>
-          <h2 className="text-lg font-semibold">Brands</h2>
-          <p className="text-sm text-[var(--muted)]">Select the active brand used across dashboard, studio, and social connections.</p>
-        </div>
+      <div className="grid lg:grid-cols-12 gap-12">
+        
+        <div className="lg:col-span-4 space-y-10">
+          <section className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400 flex items-center gap-2">
+                <Shield size={16} className="text-sky-500" /> Active Context
+              </h3>
+            </div>
+            
+            <div className="flex flex-col gap-2">
+              {(brandsQuery.data ?? []).map((brand) => (
+                <button
+                  key={brand._id}
+                  onClick={() => setActiveBrand({ _id: brand._id, name: brand.name })}
+                  className={`group flex items-center justify-between rounded-2xl border px-5 py-4 text-sm transition-all ${
+                    activeBrand?._id === brand._id
+                      ? "border-sky-500/50 bg-sky-500/10 text-white shadow-[0_0_20px_-10px_rgba(14,165,233,0.3)]"
+                      : "border-white/5 bg-white/[0.02] text-gray-500 hover:border-white/10 hover:text-gray-300"
+                  }`}
+                >
+                  <span className="font-medium tracking-tight">{brand.name}</span>
+                  {activeBrand?._id === brand._id && <div className="h-1.5 w-1.5 rounded-full bg-sky-400 shadow-[0_0_8px_rgba(56,189,248,1)]" />}
+                </button>
+              ))}
+            </div>
 
-        <div className="flex flex-wrap gap-2">
-          {(brandsQuery.data ?? []).map((brand) => (
-            <button
-              key={brand._id}
-              onClick={() => setActiveBrand({ _id: brand._id, name: brand.name })}
-              className={`rounded-lg border px-3 py-2 text-sm transition ${
-                activeBrand?._id === brand._id
-                  ? "border-sky-500 bg-sky-500/10 text-sky-300"
-                  : "border-[var(--border)] bg-[var(--surface-elevated)] hover:border-sky-500/45"
-              }`}
-            >
-              {brand.name}
-            </button>
-          ))}
-        </div>
-
-        {!isAddBrandOpen ? (
-          <button
-            type="button"
-            onClick={() => setIsAddBrandOpen(true)}
-            className="ui-btn-primary"
-          >
-            <Plus size={16} /> Add Brand
-          </button>
-        ) : (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (!newBrandName.trim()) return;
-              createBrandMutation.mutate();
-            }}
-            className="flex gap-2"
-          >
-            <input
-              value={newBrandName}
-              onChange={(e) => setNewBrandName(e.target.value)}
-              placeholder="Add a new brand"
-              className="ui-input flex-1"
-            />
-            <button
-              type="submit"
-              disabled={createBrandMutation.isPending}
-              className="ui-btn-primary"
-            >
-              <Plus size={16} /> Save
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setNewBrandName("");
-                setIsAddBrandOpen(false);
-              }}
-              className="ui-btn-secondary"
-            >
-              Cancel
-            </button>
-          </form>
-        )}
-      </section>
-
-      <section className="ui-panel space-y-4 p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <h2 className="text-lg font-semibold">Brand Profile</h2>
-            <p className="text-sm text-[var(--muted)]">Save voice and creative metadata for this brand.</p>
-          </div>
-          {activeBrand && selectedBrandRecord ? (
-            <button
-              type="button"
-              onClick={() => setIsBrandProfileOpen((prev) => !prev)}
-              className="ui-btn-secondary"
-            >
-              <Pencil size={14} />
-              {isBrandProfileOpen ? "Close" : "Edit Profile"}
-            </button>
-          ) : null}
-        </div>
-
-        {!activeBrand || !selectedBrandRecord ? (
-          <p className="text-sm text-[var(--muted)]">Create or select a brand first.</p>
-        ) : !isBrandProfileOpen ? (
-          <p className="text-sm text-[var(--muted)]">Brand profile is collapsed. Click Edit Profile to open it.</p>
-        ) : (
-          <form
-            key={selectedBrandRecord._id}
-            className="space-y-3"
-            onSubmit={(e) => {
-              e.preventDefault();
-              setProfileSaveError(null);
-              saveProfileMutation.mutate(new FormData(e.currentTarget));
-            }}
-          >
-            <div className="grid gap-3 md:grid-cols-2">
-              <input
-                name="brandColors"
-                defaultValue={(selectedBrandRecord.brandColors ?? []).join(", ")}
-                placeholder="Brand colors (comma separated)"
-                className="ui-input"
-              />
-              <input
-                name="brandStyle"
-                defaultValue={selectedBrandRecord.brandStyle ?? ""}
-                placeholder="Brand style"
-                className="ui-input"
-              />
-              <input
-                name="brandVoice"
-                defaultValue={selectedBrandRecord.brandVoice ?? ""}
-                placeholder="Brand voice"
-                className="ui-input"
-              />
-              <input
-                name="ctaStyle"
-                defaultValue={selectedBrandRecord.ctaStyle ?? ""}
-                placeholder="CTA style"
-                className="ui-input"
-              />
-              <input
-                name="logoUrl"
-                defaultValue={selectedBrandRecord.logoUrl ?? selectedBrandRecord.logo ?? ""}
-                placeholder="Logo URL"
-                className="ui-input"
-              />
-              <select
-                name="logoPosition"
-                defaultValue={(selectedBrandRecord.logoPosition as LogoPosition | undefined) ?? "top-right"}
-                className="ui-select"
+            {isAddBrandOpen ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!newBrandName.trim()) return;
+                  createBrandMutation.mutate();
+                }}
+                className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2"
               >
-                <option value="top-left">Logo Top Left</option>
-                <option value="top-right">Logo Top Right</option>
-                <option value="bottom-left">Logo Bottom Left</option>
-                <option value="bottom-right">Logo Bottom Right</option>
-                <option value="center">Logo Center</option>
-              </select>
+                <input
+                  autoFocus
+                  value={newBrandName}
+                  onChange={(e) => setNewBrandName(e.target.value)}
+                  placeholder="Brand Identity Name"
+                  className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-3 text-sm focus:outline-none focus:border-sky-500/50 transition-all"
+                />
+                <div className="flex gap-2">
+                  <button type="submit" className="flex-1 bg-white text-black text-[10px] font-black uppercase tracking-widest py-3 rounded-xl">Save</button>
+                  <button type="button" onClick={() => setIsAddBrandOpen(false)} className="px-4 bg-white/5 rounded-xl"><X size={16} /></button>
+                </div>
+              </form>
+            ) : (
+              <button
+                onClick={() => setIsAddBrandOpen(true)}
+                className="w-full flex items-center justify-center gap-2 border border-dashed border-white/10 rounded-2xl py-4 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:border-sky-500/30 hover:text-sky-500 transition-all"
+              >
+                <Plus size={14} /> Register New Brand
+              </button>
+            )}
+          </section>
+        </div>
+
+        
+        <div className="lg:col-span-8 space-y-12">
+          
+          
+          <section className="rounded-[2.5rem] border border-white/5 bg-white/1 p-8 space-y-8">
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <h3 className="text-xl font-serif font-light">Brand Metadata</h3>
+                <p className="text-xs text-gray-500">Configure the synthesis engine&aspos; creative constraints.</p>
+              </div>
+              {activeBrand && (
+                <button
+                  onClick={() => setIsBrandProfileOpen(!isBrandProfileOpen)}
+                  className={`flex items-center gap-2 rounded-full px-5 py-2 text-[10px] font-black uppercase tracking-widest transition-all ${
+                    isBrandProfileOpen ? "bg-white text-black" : "bg-white/5 text-gray-400 hover:text-white"
+                  }`}
+                >
+                  <Pencil size={12} /> {isBrandProfileOpen ? "Close Editor" : "Edit Metadata"}
+                </button>
+              )}
             </div>
 
-            <textarea
-              name="brandText"
-              defaultValue={selectedBrandRecord.brandText ?? ""}
-              placeholder="Brand text"
-              rows={4}
-              className="ui-input w-full"
+            {isBrandProfileOpen && selectedBrandRecord ? (
+              <form
+                className="grid gap-6 animate-in fade-in duration-500"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  saveProfileMutation.mutate(new FormData(e.currentTarget));
+                }}
+              >
+                <div className="grid md:grid-cols-2 gap-6">
+                  <ConfigInput icon={<Palette size={14}/>} name="brandColors" label="Color Palette" defaultValue={(selectedBrandRecord.brandColors ?? []).join(", ")} />
+                  <ConfigInput icon={<Globe size={14}/>} name="brandStyle" label="Visual Style" defaultValue={selectedBrandRecord.brandStyle} />
+                  <ConfigInput icon={<Mic2 size={14}/>} name="brandVoice" label="Voice Tone" defaultValue={selectedBrandRecord.brandVoice} />
+                  <ConfigInput icon={<Layout size={14}/>} name="ctaStyle" label="CTA Strategy" defaultValue={selectedBrandRecord.ctaStyle} />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 ml-1">Brand Narrative</label>
+                  <textarea
+                    name="brandText"
+                    defaultValue={selectedBrandRecord.brandText ?? ""}
+                    rows={4}
+                    className="w-full bg-white/5 border border-white/10 rounded-[1.5rem] p-5 text-sm focus:outline-none focus:border-sky-500/50 transition-all"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                  <p className="text-[10px] text-gray-600 italic">* Changes affect all future draft generations.</p>
+                  <button
+                    type="submit"
+                    disabled={saveProfileMutation.isPending}
+                    className="bg-sky-500 text-white px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-sky-400 transition-all disabled:opacity-50"
+                  >
+                    {saveProfileMutation.isPending ? "Syncing..." : "Commit Changes"}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="py-10 text-center border border-dashed border-white/5 rounded-[2rem]">
+                <p className="text-sm text-gray-600 italic">Select Edit Metadata to configure brand-specific AI parameters.</p>
+              </div>
+            )}
+          </section>
+
+          
+          <section className="rounded-[2.5rem] border border-white/5 bg-white/[0.01] p-8">
+            <div className="mb-8">
+              <h3 className="text-xl font-serif font-light">External Uplinks</h3>
+              <p className="text-xs text-gray-500 mt-1">Status of authorized social media pipelines.</p>
+            </div>
+            
+            <SocialConnections
+              brandId={activeBrand?._id}
+              oauthStatus={oauthStatus}
+              oauthProvider={oauthProvider}
             />
+          </section>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-            {profileSaveError ? (
-              <p className="text-sm text-red-400">{profileSaveError}</p>
-            ) : null}
+function MetricBox({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="flex flex-col items-center justify-center px-6 py-2 rounded-2xl bg-white/5 border border-white/5">
+      <span className="text-lg font-serif">{value}</span>
+      <span className="text-[9px] uppercase tracking-tighter text-gray-500 font-bold">{label}</span>
+    </div>
+  );
+}
 
-            <button
-              type="submit"
-              disabled={saveProfileMutation.isPending}
-              className="ui-btn-primary"
-            >
-              {saveProfileMutation.isPending ? "Saving..." : "Save Brand Profile"}
-            </button>
-          </form>
-        )}
-      </section>
-
-     <section className="ui-panel space-y-4 p-5">
-  <div>
-    <h2 className="text-lg font-semibold">Social Connections</h2>
-    <p className="text-sm text-[var(--muted)]">
-      Connect LinkedIn, Instagram, and Twitter for your active brand.
-    </p>
-  </div>
-
-  <SocialConnections
-    brandId={activeBrand?._id}
-    oauthStatus={oauthStatus}
-    oauthProvider={oauthProvider}
-  />
-</section>
-      <section className="ui-panel space-y-3 p-5">
-        <h2 className="text-lg font-semibold">Account</h2>
-        <button
-          onClick={() => logoutMutation.mutate()}
-          className="ui-btn-danger"
-          disabled={logoutMutation.isPending}
-        >
-          {logoutMutation.isPending ? "Logging out..." : "Logout"}
-        </button>
-      </section>
+function ConfigInput({ icon, name, label, defaultValue }: { icon: any, name: string, label: string, defaultValue?: string }) {
+  return (
+    <div className="space-y-2">
+      <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-gray-500 ml-1">
+        {icon} {label}
+      </label>
+      <input
+        name={name}
+        defaultValue={defaultValue ?? ""}
+        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-sky-500/50 transition-all"
+      />
     </div>
   );
 }

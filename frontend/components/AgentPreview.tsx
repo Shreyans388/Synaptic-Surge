@@ -10,16 +10,16 @@ import { Terminal } from "lucide-react";
 
 export default function AgentPreview() {
   return (
-    <div className="mx-auto mt-12 max-w-4xl rounded-2xl bg-gradient-to-b from-gray-200 to-transparent p-1 dark:from-gray-800 dark:to-transparent">
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-[#0B0E14]">
-        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-800">
+    <div className="mx-auto mt-12 max-w-4xl rounded-2xl bg-gradient-to-b from-sky-500/35 to-transparent p-1">
+      <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-2xl">
+        <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
           <div className="flex gap-2">
             <div className="h-3 w-3 rounded-full bg-red-400" />
             <div className="h-3 w-3 rounded-full bg-yellow-400" />
             <div className="h-3 w-3 rounded-full bg-green-400" />
           </div>
 
-          <div className="flex items-center gap-2 font-mono text-xs text-gray-400">
+          <div className="flex items-center gap-2 font-mono text-xs text-[var(--muted)]">
             <Terminal size={12} /> loomin_ai_core_v1.0.0
           </div>
         </div>
@@ -27,7 +27,7 @@ export default function AgentPreview() {
         <div className="p-6">
           <div className="grid gap-8 md:grid-cols-2">
             <div className="space-y-4">
-              <h4 className="text-sm font-bold uppercase tracking-widest text-gray-400">
+              <h4 className="text-sm font-bold uppercase tracking-widest text-[var(--muted)]">
                 Active Intelligence
               </h4>
 
@@ -56,10 +56,10 @@ export default function AgentPreview() {
               </MagicTerminal>
             </div>
 
-            <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 dark:border-gray-700 dark:bg-gray-900/30">
-              <p className="mb-2 text-xs italic text-gray-500">Agent Draft Preview:</p>
+            <div className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface-elevated)] p-4">
+              <p className="mb-2 text-xs italic text-[var(--muted)]">Agent Draft Preview:</p>
 
-              <p className="font-medium leading-relaxed text-gray-800 dark:text-gray-200">
+              <p className="font-medium leading-relaxed text-[var(--foreground)]">
                 &quot;The biggest shift in 2026 is not AI writing your posts, it is AI choosing
                 what to write based on real-time market sentiment.&quot;
               </p>

@@ -1,5 +1,4 @@
-// components/ThemeToggle.tsx
-"use client";
+﻿"use client";
 
 import { Sun, Moon } from "lucide-react";
 import { useGlobalStore } from "@/state/global.store";
@@ -20,3 +19,4 @@ export function ThemeToggle() {
     </button>
   );
 }
+

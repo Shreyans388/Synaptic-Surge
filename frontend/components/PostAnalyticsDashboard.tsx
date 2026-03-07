@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import type { Post } from "@/types/domain.type";
@@ -15,7 +15,8 @@ import {
   PolarAngleAxis,
   Radar,
 } from "recharts";
-import { Activity, TrendingUp, Sparkles, Hash } from "lucide-react";
+import { Activity, TrendingUp, Sparkles, Hash, Zap, Brain, Target, BarChart3 } from "lucide-react";
+import ThemedSelect from "@/components/ui/themed-select";
 
 interface Props {
   posts: Post[];
@@ -66,10 +67,13 @@ export default function PostAnalyticsDashboard({ posts }: Props) {
 
   if (!postsWithAi.length) {
     return (
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-        <h2 className="text-xl font-semibold">AI Analytics</h2>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          No AI analytics available yet. Analytics appears after your 48-hour tracking cycle updates each post.
+      <section className="rounded-[2.5rem] border border-white/5 bg-white/[0.02] p-10 text-center">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 text-gray-600">
+          <Brain size={24} />
+        </div>
+        <h2 className="text-xl font-serif font-light text-white">Intelligence Pending</h2>
+        <p className="mx-auto mt-2 max-w-sm text-sm text-gray-500 leading-relaxed">
+          The AI engine requires a 48-hour tracking cycle post-deployment to synthesize performance analytics.
         </p>
       </section>
     );
@@ -123,99 +127,126 @@ export default function PostAnalyticsDashboard({ posts }: Props) {
     asNumber(aiResponse.confidence);
 
   return (
-    <section className="space-y-6 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-widest text-[var(--muted)]">AI Analytics</p>
-          <h2 className="text-2xl font-bold">Post Intelligence</h2>
+    <section className="space-y-8 animate-in fade-in duration-700">
+      
+      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between border-b border-white/5 pb-8">
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-2xl bg-sky-500/10 text-sky-400 border border-sky-500/20">
+            <BarChart3 size={20} />
+          </div>
+          <div>
+            <h2 className="text-2xl font-serif font-light text-white tracking-tight">Post Intelligence</h2>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-gray-500 font-bold">Neural Analysis Engine</p>
+          </div>
         </div>
-        <div className="w-full md:w-96">
-          <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
-            Select Post
+        
+        <div className="relative min-w-[320px]">
+          <label className="absolute -top-2.5 left-4 bg-[#0A0A0A] px-2 text-[10px] font-bold uppercase tracking-widest text-gray-500 z-10">
+            Select Subject
           </label>
-          <select
+          <ThemedSelect
             value={selectedPost.id}
-            onChange={(e) => setSelectedPostId(e.target.value)}
-            className="ui-select"
-          >
-            {postsWithAi.map((post) => (
-              <option key={post.id} value={post.id}>
-                {post.masterBrief.topic} ({new Date(post.createdAt).toLocaleDateString()})
-              </option>
-            ))}
-          </select>
+            onChange={(nextPostId) => setSelectedPostId(nextPostId)}
+            options={postsWithAi.map((post) => ({
+              value: post.id,
+              label: `${post.masterBrief.topic} - ${new Date(post.createdAt).toLocaleDateString()}`,
+            }))}
+            buttonClassName="rounded-2xl border-white/10 bg-white/5 px-5 py-4 text-white"
+          />
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard title="Performance" value={overallPerformance.replaceAll("_", " ")} icon={<Activity size={16} />} />
-        <StatCard title="Best Platform" value={bestPlatform} icon={<TrendingUp size={16} />} />
-        <StatCard title="Growth" value={growthDirection.replaceAll("_", " ")} icon={<Sparkles size={16} />} />
-        <StatCard title="Confidence" value={`${confidence}%`} icon={<Hash size={16} />} />
+        <StatCard title="Optimal Path" value={bestPlatform} icon={<Target size={16} />} />
+        <StatCard title="Trajectory" value={growthDirection.replaceAll("_", " ")} icon={<TrendingUp size={16} />} />
+        <StatCard title="Model Confidence" value={`${confidence}%`} icon={<Zap size={16} />} />
       </div>
 
+      
       <div className="grid gap-6 lg:grid-cols-3">
-        <article className="rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-5 lg:col-span-2">
-          <h3 className="mb-4 text-lg font-semibold">Cross-Platform Trend</h3>
-          <div className="h-80">
+        <article className="rounded-4xl border border-white/5 bg-white/2 p-8 lg:col-span-2">
+          <div className="mb-6 flex items-center justify-between">
+            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400">Cross-Platform Trend</h3>
+            <div className="flex gap-4">
+               <div className="flex items-center gap-1.5 text-[10px] text-sky-400"><span className="h-1.5 w-1.5 rounded-full bg-sky-400"/> LinkedIn</div>
+               <div className="flex items-center gap-1.5 text-[10px] text-emerald-400"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400"/> Instagram</div>
+            </div>
+          </div>
+          <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendSeries}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" />
-                <XAxis dataKey="label" tick={{ fill: "#94a3b8", fontSize: 11 }} />
-                <YAxis tick={{ fill: "#94a3b8", fontSize: 11 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff05" vertical={false} />
+                <XAxis dataKey="label" tick={{ fill: "#4b5563", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: "#4b5563", fontSize: 10, fontWeight: 600 }} axisLine={false} tickLine={false} />
                 <Tooltip
-                  contentStyle={{ background: "#09090b", border: "1px solid #27272a", borderRadius: 10 }}
-                  labelStyle={{ color: "#d4d4d8" }}
+                  contentStyle={{ background: "#121212", border: "1px solid #ffffff10", borderRadius: 16, fontSize: '12px' }}
+                  itemStyle={{ padding: '2px 0' }}
                 />
-                <Line type="monotone" dataKey="linkedinLikes" stroke="#38bdf8" strokeWidth={2.5} dot={false} />
-                <Line type="monotone" dataKey="linkedinComments" stroke="#a78bfa" strokeWidth={2.5} dot={false} />
-                <Line type="monotone" dataKey="instagramReach" stroke="#34d399" strokeWidth={2.5} dot={false} />
-                <Line type="monotone" dataKey="redditUpvotes" stroke="#f59e0b" strokeWidth={2.5} dot={false} />
+                <Line type="monotone" dataKey="linkedinLikes" stroke="#38bdf8" strokeWidth={3} dot={false} animationDuration={1500} />
+                <Line type="monotone" dataKey="instagramReach" stroke="#34d399" strokeWidth={3} dot={false} animationDuration={1500} />
+                <Line type="monotone" dataKey="redditUpvotes" stroke="#f59e0b" strokeWidth={3} dot={false} animationDuration={1500} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </article>
 
-        <article className="rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-5">
-          <h3 className="mb-4 text-lg font-semibold">Platform Score</h3>
-          <div className="h-80">
+        <article className="rounded-4xl border border-white/5 bg-white/2 p-8">
+          <h3 className="mb-6 text-sm font-bold uppercase tracking-widest text-gray-400">Platform Saturation</h3>
+          <div className="h-80 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <RadarChart data={radarData}>
-                <PolarGrid stroke="#334155" />
-                <PolarAngleAxis dataKey="platform" tick={{ fill: "#94a3b8", fontSize: 11 }} />
-                <Radar dataKey="score" stroke="#38bdf8" fill="#38bdf8" fillOpacity={0.35} />
+                <PolarGrid stroke="#ffffff05" />
+                <PolarAngleAxis dataKey="platform" tick={{ fill: "#94a3b8", fontSize: 10, fontWeight: 700 }} />
+                <Radar dataKey="score" stroke="#38bdf8" fill="#38bdf8" fillOpacity={0.15} animationDuration={1500} />
               </RadarChart>
             </ResponsiveContainer>
           </div>
         </article>
       </div>
 
+      
       <div className="grid gap-6 md:grid-cols-2">
-        <article className="rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-5">
-          <h3 className="text-lg font-semibold">Recommendations</h3>
-          <ul className="mt-3 space-y-2 text-sm text-[var(--muted)]">
+        <article className="group rounded-4xl border border-white/5 bg-white/2 p-8 transition-colors hover:bg-white/4">
+          <div className="flex items-center gap-3 mb-6">
+            <Sparkles size={18} className="text-sky-400" />
+            <h3 className="text-sm font-bold uppercase tracking-widest text-white">Strategic Recommendations</h3>
+          </div>
+          <ul className="space-y-4">
             {recommendations.length ? (
-              recommendations.map((item, idx) => <li key={`${item}-${idx}`}>• {item}</li>)
+              recommendations.map((item, idx) => (
+                <li key={`${item}-${idx}`} className="flex gap-4 items-start group/li">
+                  <span className="text-[10px] font-black text-white/10 mt-1">0{idx + 1}</span>
+                  <p className="text-sm text-gray-400 leading-relaxed group-hover/li:text-gray-200 transition-colors">{item}</p>
+                </li>
+              ))
             ) : (
-              <li>• No recommendations available yet.</li>
+              <li className="text-sm italic text-gray-600">Pending data collection...</li>
             )}
           </ul>
         </article>
 
-        <article className="rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-5">
-          <h3 className="text-lg font-semibold">Insights & Prediction</h3>
-          <p className="mt-3 text-sm text-[var(--foreground)]">{prediction}</p>
-          <ul className="mt-3 space-y-2 text-sm text-[var(--muted)]">
-            {insights.length ? (
-              insights.slice(0, 4).map((item, idx) => <li key={`${item}-${idx}`}>• {item}</li>)
-            ) : (
-              <li>• No insights available yet.</li>
-            )}
-          </ul>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {hashtags.slice(0, 8).map((tag) => (
-              <span key={tag} className="rounded-full border border-sky-700/40 bg-sky-500/10 px-3 py-1 text-xs text-sky-300">
-                #{tag.replace(/^#/, "")}
+        <article className="rounded-[2rem] border border-white/5 bg-white/2 p-8">
+          <div className="flex items-center gap-3 mb-6">
+            <Brain size={18} className="text-emerald-400" />
+            <h3 className="text-sm font-bold uppercase tracking-widest text-white">Neural Insights</h3>
+          </div>
+          <p className="text-md font-serif text-gray-200 leading-relaxed border-l-2 border-emerald-500/30 pl-4 mb-6">
+            {prediction}
+          </p>
+          <div className="space-y-3">
+             {insights.slice(0, 3).map((item, idx) => (
+               <div key={idx} className="flex items-center gap-3 text-xs text-gray-500">
+                  <div className="h-1 w-1 rounded-full bg-emerald-500" />
+                  {item}
+               </div>
+             ))}
+          </div>
+          <div className="mt-8 flex flex-wrap gap-2 pt-6 border-t border-white/5">
+            {hashtags.slice(0, 6).map((tag) => (
+              <span key={tag} className="flex items-center gap-1 rounded-full border border-white/5 bg-white/2 px-4 py-1.5 text-[10px] font-bold text-sky-400 uppercase tracking-widest hover:bg-sky-500/10 transition-colors">
+                <Hash size={10} /> {tag.replace(/^#/, "")}
               </span>
             ))}
           </div>
@@ -235,10 +266,11 @@ function StatCard({
   icon: React.ReactNode;
 }) {
   return (
-    <article className="rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-4">
-      <div className="mb-2 inline-flex rounded-lg bg-sky-500/10 p-2 text-sky-400">{icon}</div>
-      <p className="text-xs uppercase tracking-wider text-[var(--muted)]">{title}</p>
-      <p className="mt-1 text-lg font-semibold capitalize">{value}</p>
+    <article className="rounded-3xl border border-white/5 bg-white/2 p-6 transition-all hover:border-white/10 group">
+      <div className="mb-4 inline-flex rounded-xl bg-white/5 p-2 text-gray-500 group-hover:text-sky-400 transition-colors">{icon}</div>
+      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500">{title}</p>
+      <p className="mt-1 text-lg font-serif font-light text-white capitalize group-hover:translate-x-1 transition-transform">{value}</p>
     </article>
   );
 }
+

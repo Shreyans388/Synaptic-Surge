@@ -1,6 +1,11 @@
 import { apiRequest, getApiBase } from "@/services/api/client";
 
-export type SocialProvider = "linkedin" | "instagram" | "twitter";
+export type SocialProvider =
+  | "linkedin"
+  | "instagram"
+  | "twitter"
+  | "facebook"
+  | "reddit";
 
 export interface BrandRecord {
   _id: string;

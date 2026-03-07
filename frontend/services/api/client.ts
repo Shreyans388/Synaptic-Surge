@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5004";
+﻿const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5004";
 
 interface ApiErrorPayload {
   message?: string;
@@ -27,7 +27,6 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
       const data = (await res.json()) as ApiErrorPayload;
       if (data?.message) message = data.message;
     } catch {
-      // ignore parse errors
     }
     throw new Error(message);
   }
@@ -42,3 +41,4 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
 export function getApiBase(): string {
   return API_BASE;
 }
+
