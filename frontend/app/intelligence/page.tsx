@@ -151,7 +151,7 @@ function InsightCard({
       <div className="mt-6 flex items-center justify-between border-t border-white/5 pt-4">
         <p className="text-[10px] text-gray-500 font-medium italic">{description}</p>
         {trend && (
-          <span className="text-[10px] font-bold text-sky-500">{trend}</span>
+          <span className="text-[10px] font-bold text-sky-400">{trend}</span>
         )}
       </div>
       
