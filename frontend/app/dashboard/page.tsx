@@ -60,7 +60,7 @@ export default function DashboardPage() {
   }, [publishedPosts]);
 
   const platformMix = useMemo(() => {
-    const counts: Record<string, number> = { linkedin: 0, instagram: 0, reddit: 0 };
+    const counts: Record<string, number> = { linkedin: 0, instagram: 0};
     for (const post of publishedPosts) {
       const platforms = new Set(post.platformDrafts.map((draft) => draft.platform));
       for (const platform of platforms) {
