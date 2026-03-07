@@ -18,11 +18,11 @@ const reviews = [
     img: "https://avatar.vercel.sh/david",
   },
   {
-    name: "Emily Rodriguez",
-    username: "Content Director @BrandScale",
-    body: "The biggest win for us is the optimization loop. It doesnâ€™t just generate content â€” it improves it after publishing.",
-    img: "https://avatar.vercel.sh/emily",
-  },
+  name: "Emily Rodriguez",
+  username: "Content Director @BrandScale",
+  body: "The biggest win for us is the optimization loop. It doesn’t just generate content — it improves it after publishing.",
+  img: "https://avatar.vercel.sh/emily",
+},
   {
     name: "Alex Turner",
     username: "Indie Hacker",
