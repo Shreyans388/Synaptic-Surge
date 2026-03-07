@@ -48,8 +48,8 @@ export default function Login() {
             <h2 className="text-4xl font-serif font-light leading-[1.1] tracking-tight">
               Resume your <br /> <span className="text-sky-500">operations.</span>
             </h2>
-            <p className="max-w-[280px] text-sm leading-relaxed text-gray-500">
-              Secure uplink to your brand's autonomous content infrastructure.
+            <p className="max-w-70 text-sm leading-relaxed text-gray-500">
+              Secure uplink to your brand&aspos; autonomous content infrastructure.
             </p>
           </div>
         </div>
