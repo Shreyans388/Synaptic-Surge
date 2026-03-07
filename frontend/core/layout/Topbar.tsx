@@ -60,7 +60,7 @@ export default function Topbar() {
                       (brand) => brand._id === nextBrandId
                     );
                     if (selected) {
-                      setActiveBrand(selected._id, selected);
+                      setActiveBrand(selected._id);
                     }
                   }}
                   options={(brandsQuery.data ?? []).map((brand) => ({

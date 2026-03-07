@@ -72,7 +72,7 @@ export default function StudioPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const activeBrand = useBrandStore((s) => s.activeBrand);
-  const addNotification = useBrandStore((s) => s.addNotification);
+  const addNotification = useGlobalStore((s) => s.addNotification);
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<FormState>(initialState);
