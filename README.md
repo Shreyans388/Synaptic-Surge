@@ -1,5 +1,5 @@
 # Loomin AI
-Marketing is a high-friction loop where 70% of time is manual. Unlike rigid "if-then" tools, Agentic AI is a teammate using reasoning, tool-use, and self-correction. It adapts to trends in real-time to hit business goals, freeing humans to focus on strategy rather than repetitive execution. Move from passive tools to active agency.
+Marketing is a high-friction loop where 70% of time is manual. Unlike rigid "if-then" tools, Agentic AI is a teammate using reasoning, tool-use, and self-correction. It adapts to trends in real-time to hit business goals, freeing humans to focus on strategy rather than repetitive execution. 
 
 
 # Agentic AI Marketing Agent
@@ -22,7 +22,7 @@ The Agentic AI Marketing Agent solves these challenges by:
 - Conducting market and audience research
 - Generating and deploying content across channels
 - Monitoring campaign performance in real time
-- Iteratively optimizing strategies using feedback loops
+- Iteratively optimizing strategies using feedback loops 
 
 ## Key Features
 - **Goal-Oriented Decision Making**: Acts based on high-level marketing objectives (e.g., growth, engagement, conversions)
