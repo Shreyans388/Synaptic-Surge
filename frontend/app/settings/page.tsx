@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, Pencil, LogOut, Shield, Globe, Palette, Mic2, Layout, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { useGlobalStore } from "@/state/global.store";
+
 import { useAuthStore } from "@/state/auth.store";
 
 import { logoutUser } from "@/services/api/auth.api";
@@ -17,6 +17,7 @@ import {
   type BrandRecord,
 } from "@/services/api/brand.api";
 import SocialConnections from "@/components/SocialConnections";
+import { useBrandStore } from "@/state/brand.store";
 
 type LogoPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
 
@@ -25,8 +26,8 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
 
-  const activeBrand = useGlobalStore((s) => s.activeBrand);
-  const setActiveBrand = useGlobalStore((s) => s.setActiveBrand);
+  const activeBrand = useBrandStore((s) => s.activeBrand);
+  const setActiveBrand = useBrandStore((s) => s.setActiveBrand);
 
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
@@ -53,7 +54,7 @@ export default function SettingsPage() {
   useEffect(() => {
     if (activeBrand || !brandsQuery.data?.length) return;
     const first = brandsQuery.data[0];
-    setActiveBrand({ _id: first._id, name: first.name });
+    setActiveBrand(first._id );
   }, [activeBrand, brandsQuery.data, setActiveBrand]);
 
   const selectedBrandRecord =
@@ -78,7 +79,7 @@ export default function SettingsPage() {
     onSuccess: (brand: BrandRecord) => {
       setNewBrandName("");
       setIsAddBrandOpen(false);
-      setActiveBrand({ _id: brand._id, name: brand.name });
+      setActiveBrand(brand._id);
       queryClient.invalidateQueries({ queryKey: ["brands"] });
     },
   });
@@ -175,7 +176,7 @@ export default function SettingsPage() {
               {(brandsQuery.data ?? []).map((brand) => (
                 <button
                   key={brand._id}
-                  onClick={() => setActiveBrand({ _id: brand._id, name: brand.name })}
+                  onClick={() => setActiveBrand(brand._id)}
                   className={`group flex items-center justify-between rounded-2xl border px-5 py-4 text-sm transition-all ${
                     activeBrand?._id === brand._id
                       ? "border-sky-500/50 bg-sky-500/10 text-white shadow-[0_0_20px_-10px_rgba(14,165,233,0.3)]"

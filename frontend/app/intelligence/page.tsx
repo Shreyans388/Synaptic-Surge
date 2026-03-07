@@ -2,11 +2,12 @@
 
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useGlobalStore } from "@/state/global.store";
+
 import { getPosts } from "@/services/api/posts.api";
 import { syncAnalyticsNotifications } from "@/services/api/notifications.api";
 import PostAnalyticsDashboard from "@/components/PostAnalyticsDashboard";
 import { Activity, Brain, Globe, HardDrive, Zap } from "lucide-react";
+import { useBrandStore } from "@/state/brand.store";
 
 const hasMeaningfulValue = (value: unknown): boolean => {
   if (typeof value === "string") return value.trim().length > 0;
@@ -24,7 +25,7 @@ const hasUsableAiResponse = (value: unknown): boolean => {
 };
 
 export default function IntelligencePage() {
-  const activeBrand = useGlobalStore((s) => s.activeBrand);
+  const activeBrand = useBrandStore((s) => s.activeBrand);
 
   const { data: posts = [] } = useQuery({
     queryKey: ["posts", activeBrand?._id],

@@ -7,7 +7,8 @@ import {
   markNotificationRead,
   type NotificationRecord,
 } from "@/services/api/notifications.api";
-import { useGlobalStore } from "@/state/global.store";
+
+import { useBrandStore } from "@/state/brand.store";
 
 const typeLabel: Record<NotificationRecord["type"], string> = {
   post_generated: "Synthesis Complete",
@@ -23,7 +24,7 @@ const typeIcon: Record<NotificationRecord["type"], React.ReactNode> = {
 
 export default function NotificationsPage() {
   const queryClient = useQueryClient();
-  const activeBrand = useGlobalStore((s) => s.activeBrand);
+  const activeBrand = useBrandStore((s) => s.activeBrand);
 
   const { data: notifications = [], isLoading } = useQuery({
     queryKey: ["notifications", activeBrand?._id],

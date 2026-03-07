@@ -21,6 +21,7 @@ import {
 } from "@/services/api/posts.api";
 import { getBrandConnections } from "@/services/api/brand.api";
 import { Post } from "@/types/domain.type";
+import { useBrandStore } from "@/state/brand.store";
 
 type PublishPlatform = "linkedin" | "instagram";
 
@@ -68,7 +69,7 @@ const extractSuccessfulPublishPlatforms = (
 export default function StudioPage() {
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
-  const activeBrand = useGlobalStore((s) => s.activeBrand);
+  const activeBrand = useBrandStore((s) => s.activeBrand);
   const addNotification = useGlobalStore((s) => s.addNotification);
 
   const [open, setOpen] = useState(false);

@@ -1,11 +1,11 @@
 ﻿"use client";
 
 import { getBrands } from "@/services/api/brand.api";
-import { useGlobalStore } from "@/state/global.store";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
 import { Cpu, Globe } from "lucide-react";
 import ThemedSelect from "@/components/ui/themed-select";
+import { useBrandStore } from "@/state/brand.store";
 
 const TITLES: Record<string, string> = {
   "/dashboard": "Control Center",
@@ -17,8 +17,8 @@ const TITLES: Record<string, string> = {
 
 export default function Topbar() {
   const pathname = usePathname();
-  const activeBrand = useGlobalStore((state) => state.activeBrand);
-  const setActiveBrand = useGlobalStore((state) => state.setActiveBrand);
+  const activeBrand = useBrandStore((state) => state.activeBrand);
+  const setActiveBrand = useBrandStore((state) => state.setActiveBrand);
 
   const brandsQuery = useQuery({
     queryKey: ["brands"],
@@ -60,10 +60,9 @@ export default function Topbar() {
                       (brand) => brand._id === nextBrandId
                     );
                     if (selected) {
-                      setActiveBrand({
-                        _id: selected._id,
-                        name: selected.name,
-                      });
+                      setActiveBrand(
+                       selected._id
+                      );
                     }
                   }}
                   options={(brandsQuery.data ?? []).map((brand) => ({
