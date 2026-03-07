@@ -34,6 +34,7 @@ interface FormState {
   imagePreference: "" | "use_image" | "generate_new" | "use_reference" | "no_image";
   imagePrompt: string;
   referenceImageUrl: string;
+  referenceImageFile: File | null;
 }
 
 const initialState: FormState = {
@@ -45,6 +46,7 @@ const initialState: FormState = {
   imagePreference: "",
   imagePrompt: "",
   referenceImageUrl: "",
+  referenceImageFile: null,
 };
 
 const extractSuccessfulPublishPlatforms = (
@@ -158,7 +160,43 @@ export default function StudioPage() {
     },
   });
 
-  const handleGenerateDraft = () => {
+  const uploadReferenceImageToCloudinary = async (file: File): Promise<string> => {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME?.trim();
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET?.trim();
+    if (!cloudName || !uploadPreset) {
+      throw new Error(
+        "Cloudinary is not configured. Set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME and NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET."
+      );
+    }
+
+    const formData = new FormData();
+    formData.set("file", file);
+    formData.set("upload_preset", uploadPreset);
+    formData.set("folder", "loomin-ai/reference-images");
+
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = (await response.json()) as {
+      secure_url?: string;
+      url?: string;
+      error?: { message?: string };
+    };
+    if (!response.ok) {
+      throw new Error(data.error?.message ?? "Cloudinary upload failed.");
+    }
+
+    const uploadedUrl = data.secure_url ?? data.url;
+    if (!uploadedUrl || uploadedUrl.trim().length === 0) {
+      throw new Error("Cloudinary did not return an image URL.");
+    }
+
+    return uploadedUrl.trim();
+  };
+
+  const handleGenerateDraft = async () => {
     if (!activeBrand) {
       toast.error("Please select a brand first.");
       return;
@@ -166,6 +204,17 @@ export default function StudioPage() {
     if (!user?._id || !user?.email) {
       toast.error("Please log in again to generate drafts.");
       return;
+    }
+    let referenceImage = form.referenceImageUrl.trim();
+    if (form.referenceImageFile) {
+      const uploadToastId = toast.loading("Uploading reference image...");
+      try {
+        referenceImage = await uploadReferenceImageToCloudinary(form.referenceImageFile);
+        toast.success("Reference image uploaded.", { id: uploadToastId });
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not upload selected image file.", { id: uploadToastId });
+        return;
+      }
     }
     const payload: GenerateWorkflow1Payload = {
       brandId: activeBrand._id,
@@ -179,7 +228,7 @@ export default function StudioPage() {
       platforms: form.platforms,
       image_preference: form.imagePreference,
       image_prompt: form.imagePrompt.trim(),
-      reference_image_url: form.referenceImageUrl.trim(),
+      reference_image_url: referenceImage,
     };
     generateMutation.mutate(payload);
   };
@@ -504,12 +553,36 @@ export default function StudioPage() {
                   <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Reference URL</span>
                   <input
                     value={form.referenceImageUrl}
-                    onChange={(e) => setForm((prev) => ({ ...prev, referenceImageUrl: e.target.value }))}
+                    onChange={(e) =>
+                      setForm((prev) => ({ ...prev, referenceImageUrl: e.target.value, referenceImageFile: null }))
+                    }
                     className="w-full bg-white/5 border border-white/5 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-sky-500/30 transition-all"
                     placeholder="https://..."
                   />
                 </label>
               </div>
+
+              <label className="block space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Or Upload Reference Image</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const nextFile = e.target.files?.[0] ?? null;
+                    setForm((prev) => ({
+                      ...prev,
+                      referenceImageFile: nextFile,
+                      referenceImageUrl: nextFile ? "" : prev.referenceImageUrl,
+                    }));
+                  }}
+                  className="w-full cursor-pointer bg-white/5 border border-white/5 rounded-2xl px-5 py-4 text-sm text-gray-300 file:mr-4 file:rounded-full file:border-0 file:bg-white file:px-4 file:py-2 file:text-xs file:font-bold file:text-black hover:border-sky-500/30 transition-all"
+                />
+                {form.referenceImageFile && (
+                  <p className="text-xs text-gray-400">
+                    Selected: {form.referenceImageFile.name}
+                  </p>
+                )}
+              </label>
             </div>
 
             <div className="flex items-center justify-end gap-6 border-t border-white/5 px-8 py-6 bg-white/[0.01]">

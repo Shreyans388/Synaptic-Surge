@@ -94,6 +94,8 @@ const safeText = (value: unknown): string | undefined => {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 };
 
+const isDataImageUrl = (value: string): boolean => /^data:image\//i.test(value);
+
 const parsePlatforms = (value: unknown): Platform[] | undefined => {
   if (!Array.isArray(value)) return undefined;
   const allowed: Platform[] = ["linkedin", "instagram", "reddit", "facebook"];
@@ -327,6 +329,13 @@ export const generatePostDraft = async (
     }
     
     const requestedPlatforms = parsePlatforms(req.body.platforms);
+    const incomingReferenceImage = safeText(req.body.reference_image_url) ?? "";
+    const persistedReferenceImageUrl = isDataImageUrl(incomingReferenceImage)
+      ? (await persistImageUrl(incomingReferenceImage, {
+          folder: "loomin-ai/reference-images",
+        })) ?? incomingReferenceImage
+      : incomingReferenceImage;
+
     const workflow1Payload: Workflow1Input = {
       userId: safeText(req.body.userId) ?? authUserId,
       userEmail: safeText(req.body.userEmail) ?? req.user!.email,
@@ -337,7 +346,7 @@ export const generatePostDraft = async (
       context: safeText(req.body.context) ?? "",
       image_preference: safeText(req.body.image_preference) ?? "",
       image_prompt: safeText(req.body.image_prompt) ?? "",
-      reference_image_url: safeText(req.body.reference_image_url) ?? "",
+      reference_image_url: persistedReferenceImageUrl,
       ...(requestedPlatforms ? { platforms: requestedPlatforms } : {}),
     };
 
@@ -369,9 +378,12 @@ export const generatePostDraft = async (
         ? workflow1Data.platforms
         : requestedPlatforms ?? [];
 
-    const persistedImageUrl = await persistImageUrl(workflow1Data.image_url, {
+    const persistedImageUrl = await persistImageUrl(
+      safeText(workflow1Data.image_url) ?? persistedReferenceImageUrl,
+      {
       folder: "loomin-ai/drafts",
-    });
+      }
+    );
 
     const createPayload: Record<string, unknown> = {
       _id: randomUUID(),

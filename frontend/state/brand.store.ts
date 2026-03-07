@@ -51,7 +51,7 @@ interface BrandState {
   fetchBrands: () => Promise<void>;
   createBrand: (data: Partial<Brand>) => Promise<Brand>;
   updateBrand: (brandId: string, data: Partial<Brand>) => Promise<void>;
-  setActiveBrand: (brandId: string) => void;
+  setActiveBrand: (brandId: string, brandOverride?: Brand) => void;
   fetchConnections: (brandId: string) => Promise<void>;
   disconnectPlatform: (
     brandId: string,
@@ -138,11 +138,16 @@ export const useBrandStore = create<BrandState>((set, get) => ({
     }
   },
 
-  setActiveBrand: (brandId) => {
-    const brand = get().brands.find((b) => b._id === brandId);
-    if (brand) {
-      set({ activeBrand: brand });
-    }
+  setActiveBrand: (brandId, brandOverride) => {
+    const brand = get().brands.find((b) => b._id === brandId) ?? brandOverride;
+    if (!brand) return;
+
+    set((state) => ({
+      activeBrand: brand,
+      brands: state.brands.some((item) => item._id === brand._id)
+        ? state.brands
+        : [brand, ...state.brands],
+    }));
   },
 
   fetchConnections: async (brandId) => {
