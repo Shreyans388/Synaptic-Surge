@@ -79,6 +79,7 @@ export default function StudioPage() {
   const [scheduleByPost, setScheduleByPost] = useState<Record<string, string>>({});
   const [selectedPlatformsByPost, setSelectedPlatformsByPost] = useState<Record<string, PublishPlatform[]>>({});
   const [expandedByPost, setExpandedByPost] = useState<Record<string, boolean>>({});
+  const [editedContentByPost, setEditedContentByPost] = useState<Record<string, Record<string, string>>>({});
   const generatingToastIdRef = useRef<string | number | null>(null);
   const publishingToastIdRef = useRef<string | number | null>(null);
 
@@ -330,7 +331,23 @@ export default function StudioPage() {
                         </span>
                         <button
                           type="button"
-                          onClick={() => setExpandedByPost((prev) => ({ ...prev, [post.id]: !prev[post.id] }))}
+                          onClick={() => {
+                            setExpandedByPost((prev) => {
+                              const next = !prev[post.id];
+
+                              if (next && !editedContentByPost[post.id]) {
+                                setEditedContentByPost((prevContent) => ({
+                                  ...prevContent,
+                                  [post.id]: post.platformDrafts.reduce<Record<string, string>>((acc, draft) => {
+                                    acc[draft.platform] = draft.content;
+                                    return acc;
+                                  }, {}),
+                                }));
+                              }
+
+                              return { ...prev, [post.id]: next };
+                            });
+                          }}
                           className="flex items-center gap-1 rounded-full border border-white/10 px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:bg-white hover:text-black transition-all"
                         >
                           {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -359,7 +376,19 @@ export default function StudioPage() {
                             {post.platformDrafts.map((draft) => (
                               <article key={`${post.id}-${draft.platform}`} className="rounded-2xl border border-white/5 bg-white/[0.03] p-6">
                                 <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-sky-500">{draft.platform}</p>
-                                <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-300 font-light">{draft.content}</p>
+                                <textarea
+                                  value={editedContentByPost[post.id]?.[draft.platform] ?? draft.content}
+                                  onChange={(e) =>
+                                    setEditedContentByPost((prev) => ({
+                                      ...prev,
+                                      [post.id]: {
+                                        ...(prev[post.id] ?? {}),
+                                        [draft.platform]: e.target.value,
+                                      },
+                                    }))
+                                  }
+                                  className="w-full bg-transparent resize-none outline-none whitespace-pre-wrap text-sm leading-relaxed text-gray-300 font-light"
+                                />
                               </article>
                             ))}
                           </div>
@@ -417,7 +446,8 @@ export default function StudioPage() {
                               const selectedContent = post.platformDrafts
                                 .filter((draft) => selectedPlatforms.includes(draft.platform as PublishPlatform))
                                 .reduce<NonNullable<Workflow1OutputPayload["content"]>>((acc, draft) => {
-                                  acc[draft.platform] = draft.content;
+                                  acc[draft.platform] =
+                                    editedContentByPost[post.id]?.[draft.platform] ?? draft.content;
                                   return acc;
                                 }, {});
                               publishMutation.mutate({
@@ -614,4 +644,3 @@ const IMAGE_PREFERENCE_OPTIONS: Array<{
   { label: "Use reference image", value: "use_reference" },
   { label: "No image", value: "no_image" },
 ];
-
